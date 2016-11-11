@@ -55,4 +55,9 @@ func TestGetWithQuery(t *testing.T) {
 	assert.NoError(err, "Get request with query string should cause no error.")
 	data, _ := ioutil.ReadAll(resp.Body)
 	assert.Equal("foo=bar", string(data))
+
+	resp, err = gohttp.New().Query("foo", "bar").Query("name", "cizixs").Get(ts.URL)
+	assert.NoError(err, "Get request with query string should cause no error.")
+	data, _ = ioutil.ReadAll(resp.Body)
+	assert.Equal("foo=bar&name=cizixs", string(data))
 }
