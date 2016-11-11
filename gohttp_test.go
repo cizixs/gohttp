@@ -29,6 +29,20 @@ func TestGet(t *testing.T) {
 	assert.Equal(greeting, string(actualGreeting))
 }
 
+func TestGetWithPath(t *testing.T) {
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, r.URL.Path)
+	}))
+	defer ts.Close()
+
+	resp, err := gohttp.New().Path("/cizixs").Get(ts.URL)
+	assert.NoError(err, "Get request with path should cause no error.")
+	data, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("/cizixs", string(data))
+}
+
 func TestGetWithQuery(t *testing.T) {
 	assert := assert.New(t)
 

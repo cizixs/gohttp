@@ -2,6 +2,7 @@ package gohttp
 
 import (
 	"net/http"
+	"path/filepath"
 )
 
 // Client is the main struct that wraps net/http
@@ -10,6 +11,7 @@ type Client struct {
 	c     *http.Client
 	query map[string]string
 	url   string
+	path  string
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -24,12 +26,19 @@ func New() *Client {
 	}
 }
 
-func (g *Client) prepareRequest(method string) (*http.Request, error) {
-	req, err := http.NewRequest(method, g.url, nil)
+func (c *Client) prepareRequest(method string) (*http.Request, error) {
+	req, err := http.NewRequest(method, c.url, nil)
 
-	if len(g.query) != 0 {
+	// concatenate path to url if exists
+	if c.path != "" {
+		p := req.URL.Path
+		req.URL.Path = filepath.Join(p, c.path)
+	}
+
+	// setup the query string
+	if len(c.query) != 0 {
 		q := req.URL.Query()
-		for key, value := range g.query {
+		for key, value := range c.query {
 			q.Add(key, value)
 		}
 		req.URL.RawQuery = q.Encode()
@@ -43,19 +52,27 @@ func (g *Client) prepareRequest(method string) (*http.Request, error) {
 }
 
 // Get handles HTTP GET request, and return response to user
-func (g *Client) Get(url string) (*http.Response, error) {
-	g.url = url
-	req, err := g.prepareRequest("GET")
+func (c *Client) Get(url string) (*http.Response, error) {
+	c.url = url
+	req, err := c.prepareRequest("GET")
 	if err != nil {
 		return nil, err
 	}
-	return g.c.Do(req)
+	return c.c.Do(req)
+}
+
+// Path concatenate url with resource path string
+func (c *Client) Path(path string) *Client {
+	if path != "" {
+		c.path = path
+	}
+	return c
 }
 
 // Query set parameter query string
-func (g *Client) Query(key, value string) *Client {
-	g.query[key] = value
-	return g
+func (c *Client) Query(key, value string) *Client {
+	c.query[key] = value
+	return c
 }
 
 // Get provides a shortcut to use
