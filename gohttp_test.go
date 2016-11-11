@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,14 +34,14 @@ func TestGetWithPath(t *testing.T) {
 	assert := assert.New(t)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, r.URL.Path)
+		fmt.Fprint(w, r.URL.Path)
 	}))
 	defer ts.Close()
 
-	resp, err := gohttp.New().Path("/cizixs").Get(ts.URL)
+	resp, err := gohttp.New().Path("/users").Path("cizixs").Get(ts.URL)
 	assert.NoError(err, "Get request with path should cause no error.")
 	data, _ := ioutil.ReadAll(resp.Body)
-	assert.Equal("/cizixs", string(data))
+	assert.Equal("/users/cizixs", string(data))
 }
 
 func TestGetWithQuery(t *testing.T) {
@@ -60,4 +61,20 @@ func TestGetWithQuery(t *testing.T) {
 	assert.NoError(err, "Get request with query string should cause no error.")
 	data, _ = ioutil.ReadAll(resp.Body)
 	assert.Equal("foo=bar&name=cizixs", string(data))
+}
+
+func TestGetWithHeader(t *testing.T) {
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Header.Write(w)
+	}))
+	defer ts.Close()
+
+	userAgent := "gohttp client by cizixs"
+	resp, err := gohttp.New().Header("User-Agent", userAgent).Get(ts.URL)
+	assert.NoError(err, "Get request with header should cause no error.")
+	data, _ := ioutil.ReadAll(resp.Body)
+	assert.True(strings.Contains(string(data), "User-Agent"))
+	assert.True(strings.Contains(string(data), userAgent))
 }

@@ -7,11 +7,13 @@ import (
 
 // Client is the main struct that wraps net/http
 type Client struct {
-	req   *http.Request
-	c     *http.Client
-	query map[string]string
-	url   string
-	path  string
+	c *http.Client
+
+	// request parameters
+	query   map[string]string
+	headers map[string]string
+	url     string
+	path    string
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -21,8 +23,9 @@ var DefaultClient = New()
 // New returns a new GoClient
 func New() *Client {
 	return &Client{
-		c:     &http.Client{},
-		query: make(map[string]string),
+		c:       &http.Client{},
+		query:   make(map[string]string),
+		headers: make(map[string]string),
 	}
 }
 
@@ -42,6 +45,13 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 			q.Add(key, value)
 		}
 		req.URL.RawQuery = q.Encode()
+	}
+
+	// setup headers
+	if len(c.headers) != 0 {
+		for key, value := range c.headers {
+			req.Header.Add(key, value)
+		}
 	}
 
 	if err != nil {
@@ -64,7 +74,7 @@ func (c *Client) Get(url string) (*http.Response, error) {
 // Path concatenate url with resource path string
 func (c *Client) Path(path string) *Client {
 	if path != "" {
-		c.path = path
+		c.path = filepath.Join(c.path, path)
 	}
 	return c
 }
@@ -72,6 +82,12 @@ func (c *Client) Path(path string) *Client {
 // Query set parameter query string
 func (c *Client) Query(key, value string) *Client {
 	c.query[key] = value
+	return c
+}
+
+// Header sets request header data
+func (c *Client) Header(key, value string) *Client {
+	c.headers[key] = value
 	return c
 }
 
