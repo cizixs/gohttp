@@ -1,10 +1,19 @@
 package gohttp
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	"path/filepath"
 
 	"github.com/google/go-querystring/query"
+)
+
+const (
+	contentType     = "Content-Type"
+	jsonContentType = "application/json"
+	formContentType = "application/x-www-form-urlencoded"
 )
 
 // Client is the main struct that wraps net/http
@@ -17,13 +26,14 @@ type Client struct {
 	headers      map[string]string
 	url          string
 	path         string
+	body         io.Reader
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
 // For more control, please create a client manually.
 var DefaultClient = New()
 
-// New returns a new GoClient
+// New returns a new GoClient with default values
 func New() *Client {
 	return &Client{
 		c:            &http.Client{},
@@ -34,7 +44,7 @@ func New() *Client {
 }
 
 func (c *Client) prepareRequest(method string) (*http.Request, error) {
-	req, err := http.NewRequest(method, c.url, nil)
+	req, err := http.NewRequest(method, c.url, c.body)
 
 	// concatenate path to url if exists
 	if c.path != "" {
@@ -94,7 +104,20 @@ func (c *Client) Get(url string) (*http.Response, error) {
 	return c.c.Do(req)
 }
 
-// Path concatenate url with resource path string
+// Post handles HTTP POST request
+func (c *Client) Post(url string) (*http.Response, error) {
+	c.url = url
+	req, err := c.prepareRequest("POST")
+	if err != nil {
+		return nil, err
+	}
+
+	return c.c.Do(req)
+}
+
+// Path concatenates base url with resource path.
+// Path can be with or without slash `/` at both end,
+// it will be handled properly.
 func (c *Client) Path(path string) *Client {
 	if path != "" {
 		c.path = filepath.Join(c.path, path)
@@ -121,7 +144,31 @@ func (c *Client) Header(key, value string) *Client {
 	return c
 }
 
-// Get provides a shortcut to use
+type jsonBodyData struct {
+	payload interface{}
+}
+
+func (jbd jsonBodyData) Body() (io.Reader, error) {
+	buf := &bytes.Buffer{}
+	err := json.NewEncoder(buf).Encode(jbd.payload)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
+// JSON sets data in body, and send it as application/json
+// If the actual method does not support body or json data, such as `GET`, `HEAD`,
+// it will be simply omitted.
+func (c *Client) JSON(bodyJSON interface{}) *Client {
+	c.Header(contentType, jsonContentType)
+	//TODO: how to handle error
+	body, _ := jsonBodyData{payload: bodyJSON}.Body()
+	c.body = body
+	return c
+}
+
+// Get provides a shortcut to send `GET` request
 func Get(url string) (*http.Response, error) {
 	return DefaultClient.Get(url)
 }

@@ -1,6 +1,7 @@
 package gohttp_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -97,4 +98,35 @@ func TestGetWithHeader(t *testing.T) {
 	data, _ := ioutil.ReadAll(resp.Body)
 	assert.True(strings.Contains(string(data), "User-Agent"))
 	assert.True(strings.Contains(string(data), userAgent))
+}
+
+func TestPostJSON(t *testing.T) {
+	assert := assert.New(t)
+
+	type User struct {
+		Title string `json:"title,omitempty"`
+		Name  string `json:"name,omitempty"`
+		Age   int    `json:"age,omitempty"`
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		data, _ := ioutil.ReadAll(r.Body)
+		fmt.Fprint(w, string(data))
+	}))
+	defer ts.Close()
+
+	user := User{
+		Title: "Test title",
+		Name:  "cizixs",
+	}
+
+	resp, err := gohttp.New().JSON(user).Post(ts.URL)
+	assert.NoError(err, "Post request should cause no error.")
+	data, _ := ioutil.ReadAll(resp.Body)
+	returnedUser := User{}
+	json.Unmarshal(data, &returnedUser)
+
+	assert.Equal("Test title", returnedUser.Title)
+	assert.Equal("cizixs", returnedUser.Name)
+	assert.Equal(0, returnedUser.Age)
 }
