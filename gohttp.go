@@ -3,6 +3,8 @@ package gohttp
 import (
 	"net/http"
 	"path/filepath"
+
+	"github.com/google/go-querystring/query"
 )
 
 // Client is the main struct that wraps net/http
@@ -10,10 +12,11 @@ type Client struct {
 	c *http.Client
 
 	// request parameters
-	query   map[string]string
-	headers map[string]string
-	url     string
-	path    string
+	query        map[string]string
+	queryStructs []interface{}
+	headers      map[string]string
+	url          string
+	path         string
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -23,9 +26,10 @@ var DefaultClient = New()
 // New returns a new GoClient
 func New() *Client {
 	return &Client{
-		c:       &http.Client{},
-		query:   make(map[string]string),
-		headers: make(map[string]string),
+		c:            &http.Client{},
+		query:        make(map[string]string),
+		queryStructs: make([]interface{}, 5),
+		headers:      make(map[string]string),
 	}
 }
 
@@ -38,11 +42,30 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 		req.URL.Path = filepath.Join(p, c.path)
 	}
 
-	// setup the query string
+	// setup the query string, there can be many query strings,
+	// and they're connected with `&` symbol. Also rawquery and
+	// queryStructs data will be merged.
 	if len(c.query) != 0 {
 		q := req.URL.Query()
 		for key, value := range c.query {
 			q.Add(key, value)
+		}
+		req.URL.RawQuery = q.Encode()
+	}
+
+	if len(c.queryStructs) != 0 {
+		q := req.URL.Query()
+
+		for _, queryStruct := range c.queryStructs {
+			qValues, err := query.Values(queryStruct)
+			if err != nil {
+				return req, err
+			}
+			for key, values := range qValues {
+				for _, value := range values {
+					q.Add(key, value)
+				}
+			}
 		}
 		req.URL.RawQuery = q.Encode()
 	}
@@ -82,6 +105,13 @@ func (c *Client) Path(path string) *Client {
 // Query set parameter query string
 func (c *Client) Query(key, value string) *Client {
 	c.query[key] = value
+	return c
+}
+
+// QueryStruct parses a struct as query strings
+// On how it works, please refer to github.com/google/go-querystring repo
+func (c *Client) QueryStruct(queryStruct interface{}) *Client {
+	c.queryStructs = append(c.queryStructs, queryStruct)
 	return c
 }
 
