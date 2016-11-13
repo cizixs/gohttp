@@ -31,6 +31,91 @@ func TestGet(t *testing.T) {
 	assert.Equal(greeting, string(actualGreeting))
 }
 
+func TestHead(t *testing.T) {
+	assert := assert.New(t)
+
+	testHeader := "Test-Header"
+	// test server that writes HTTP method back
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Because HEAD response does not include body, we set the received method in header
+		w.Header().Add(testHeader, r.Method)
+	}))
+	defer ts.Close()
+
+	resp, _ := gohttp.Head(ts.URL)
+	assert.Equal("HEAD", resp.Header.Get(testHeader))
+}
+
+func TestDelete(t *testing.T) {
+	assert := assert.New(t)
+
+	// test server that writes HTTP method back
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(r.Method))
+	}))
+	defer ts.Close()
+
+	resp, _ := gohttp.Delete(ts.URL)
+	method, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("DELETE", string(method))
+}
+
+func TestPost(t *testing.T) {
+	assert := assert.New(t)
+
+	// test server that writes HTTP method back
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(r.Method))
+	}))
+	defer ts.Close()
+
+	resp, _ := gohttp.Post(ts.URL, nil)
+	method, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("POST", string(method))
+}
+
+func TestPatch(t *testing.T) {
+	assert := assert.New(t)
+
+	// test server that writes HTTP method back
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(r.Method))
+	}))
+	defer ts.Close()
+
+	resp, _ := gohttp.Patch(ts.URL, nil)
+	method, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("PATCH", string(method))
+}
+
+func TestOptions(t *testing.T) {
+	assert := assert.New(t)
+
+	// test server that writes HTTP method back
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(r.Method))
+	}))
+	defer ts.Close()
+
+	resp, _ := gohttp.Options(ts.URL)
+	method, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("OPTIONS", string(method))
+}
+
+func TestPut(t *testing.T) {
+	assert := assert.New(t)
+
+	// test server that writes HTTP method back
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(r.Method))
+	}))
+	defer ts.Close()
+
+	resp, _ := gohttp.Put(ts.URL, nil)
+	method, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("PUT", string(method))
+}
+
 func TestGetWithPath(t *testing.T) {
 	assert := assert.New(t)
 
