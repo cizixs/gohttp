@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/go-querystring/query"
 )
@@ -181,14 +182,54 @@ func (jbd jsonBodyData) Body() (io.Reader, error) {
 	return buf, nil
 }
 
-// JSON sets data in body, and send it as application/json
+// JSON accepts a struct as data, and sets it as body, and send it as application/json
 // If the actual method does not support body or json data, such as `GET`, `HEAD`,
 // it will be simply omitted.
 func (c *Client) JSON(bodyJSON interface{}) *Client {
-	c.Header(contentType, jsonContentType)
-	//TODO: how to handle error
-	body, _ := jsonBodyData{payload: bodyJSON}.Body()
-	c.body = body
+	if bodyJSON != nil {
+		c.Header(contentType, jsonContentType)
+		//TODO: how to handle error
+		body, _ := jsonBodyData{payload: bodyJSON}.Body()
+		c.body = body
+	}
+	return c
+}
+
+type formBodyData struct {
+	payload interface{}
+}
+
+// Body returns io.Reader from form data.
+// Form data is a collection of many key-value pairs,
+// so we use go-querystring to parse it to string, then
+// create a io.Reader interface.
+func (fbd formBodyData) Body() (io.Reader, error) {
+	values, err := query.Values(fbd.payload)
+	if err != nil {
+		return nil, err
+	}
+	return strings.NewReader(values.Encode()), nil
+}
+
+// Form accepts a struct, uses it as body data, and sent it as application/www-x-form-urlencoded
+// If the actual method does not support body or form data, such as `GET`, `HEAD`,
+// it will be simply omitted.
+func (c *Client) Form(bodyForm interface{}) *Client {
+	if bodyForm != nil {
+		c.Header(contentType, formContentType)
+		body, _ := formBodyData{payload: bodyForm}.Body()
+		c.body = body
+	}
+	return c
+}
+
+// Body accepts `io.Reader`, will read data from it and use it as request body.
+// This doee not set `Content-Type` header, so users should use `Header(key, value)`
+// to specify it if necessary.
+func (c *Client) Body(body io.Reader) *Client {
+	if body != nil {
+		c.body = body
+	}
 	return c
 }
 

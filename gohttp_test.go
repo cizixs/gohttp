@@ -100,6 +100,36 @@ func TestGetWithHeader(t *testing.T) {
 	assert.True(strings.Contains(string(data), userAgent))
 }
 
+func TestPostForm(t *testing.T) {
+	assert := assert.New(t)
+
+	type Login struct {
+		Name     string `json:"name,omitempty"`
+		Password string `json:"password,omitempty"`
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		data, _ := ioutil.ReadAll(r.Body)
+		if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+			w.Write([]byte("No form data"))
+		} else {
+			fmt.Fprint(w, string(data))
+		}
+	}))
+	defer ts.Close()
+
+	user := Login{
+		Name:     "cizixs",
+		Password: "test1234",
+	}
+
+	resp, err := gohttp.New().Form(user).Post(ts.URL)
+	assert.NoError(err, "Post request should cause no error.")
+	data, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal("Name=cizixs&Password=test1234", string(data))
+}
+
 func TestPostJSON(t *testing.T) {
 	assert := assert.New(t)
 
@@ -111,7 +141,11 @@ func TestPostJSON(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		data, _ := ioutil.ReadAll(r.Body)
-		fmt.Fprint(w, string(data))
+		if r.Header.Get("Content-Type") != "application/json" {
+			w.Write([]byte("No json data"))
+		} else {
+			fmt.Fprint(w, string(data))
+		}
 	}))
 	defer ts.Close()
 
