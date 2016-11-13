@@ -94,25 +94,49 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 	return req, nil
 }
 
-// Get handles HTTP GET request, and return response to user
-func (c *Client) Get(url string) (*http.Response, error) {
+// Do takes HTTP and url, then makes the request, return the response
+func (c *Client) Do(method, url string) (*http.Response, error) {
 	c.url = url
-	req, err := c.prepareRequest("GET")
+	req, err := c.prepareRequest(method)
 	if err != nil {
 		return nil, err
 	}
 	return c.c.Do(req)
 }
 
+// Get handles HTTP GET request, and return response to user
+func (c *Client) Get(url string) (*http.Response, error) {
+	return c.Do("GET", url)
+}
+
 // Post handles HTTP POST request
 func (c *Client) Post(url string) (*http.Response, error) {
-	c.url = url
-	req, err := c.prepareRequest("POST")
-	if err != nil {
-		return nil, err
-	}
+	return c.Do("POST", url)
+}
 
-	return c.c.Do(req)
+// Head handles HTTP HEAD request
+func (c *Client) Head(url string) (*http.Response, error) {
+	return c.Do("HEAD", url)
+}
+
+// Put handles HTTP PUT request
+func (c *Client) Put(url string) (*http.Response, error) {
+	return c.Do("PUT", url)
+}
+
+// Delete handles HTTP DELETE request
+func (c *Client) Delete(url string) (*http.Response, error) {
+	return c.Do("DELETE", url)
+}
+
+// Patch handles HTTP PATCH request
+func (c *Client) Patch(url string) (*http.Response, error) {
+	return c.Do("PATCH", url)
+}
+
+// Options handles HTTP OPTIONS request
+func (c *Client) Options(url string) (*http.Response, error) {
+	return c.Do("OPTIONS", url)
 }
 
 // Path concatenates base url with resource path.
