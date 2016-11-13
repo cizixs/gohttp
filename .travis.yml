@@ -11,7 +11,7 @@ install:
 script:
     - go get -t -v ./...
     - go test -v -covermode=count -coverprofile=coverage.out
-    - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+    - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci
 env:
   global:
     - PATH=$HOME/gopath/bin:$PATH
