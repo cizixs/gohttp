@@ -1,5 +1,9 @@
 # gohttp
+[![Travis-ci Status](https://travis-ci.org/cizixs/go-http.svg?branch=master)](https://travis-ci.org/cizixs/go-http)
+[![Coverage Status](https://coveralls.io/repos/github/cizixs/gohttp/badge.svg?branch=master)](https://coveralls.io/github/cizixs/gohttp?branch=master)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cizixs/gohttp)](https://goreportcard.com/report/github.com/cizixs/gohttp)
+[![GoDoc](https://godoc.org/github.com/cizixs/gohttp?status.svg)](https://godoc.org/github.com/cizixs/gohttp)
 
 A simple to use golang http client
 
