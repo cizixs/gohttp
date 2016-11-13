@@ -143,9 +143,11 @@ func (c *Client) Options(url string) (*http.Response, error) {
 // Path concatenates base url with resource path.
 // Path can be with or without slash `/` at both end,
 // it will be handled properly.
-func (c *Client) Path(path string) *Client {
-	if path != "" {
-		c.path = filepath.Join(c.path, path)
+func (c *Client) Path(paths ...string) *Client {
+	for _, path := range paths {
+		if path != "" {
+			c.path = filepath.Join(c.path, path)
+		}
 	}
 	return c
 }
