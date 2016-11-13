@@ -17,6 +17,11 @@ const (
 	formContentType = "application/x-www-form-urlencoded"
 )
 
+type basicAuth struct {
+	username string
+	password string
+}
+
 // Client is the main struct that wraps net/http
 type Client struct {
 	c *http.Client
@@ -28,6 +33,7 @@ type Client struct {
 	url          string
 	path         string
 	body         io.Reader
+	auth         basicAuth
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -41,6 +47,7 @@ func New() *Client {
 		query:        make(map[string]string),
 		queryStructs: make([]interface{}, 5),
 		headers:      make(map[string]string),
+		auth:         basicAuth{},
 	}
 }
 
@@ -86,6 +93,11 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 		for key, value := range c.headers {
 			req.Header.Add(key, value)
 		}
+	}
+
+	// set basic auth if exists
+	if c.auth.username != "" && c.auth.password != "" {
+		req.SetBasicAuth(c.auth.username, c.auth.password)
 	}
 
 	if err != nil {
@@ -162,6 +174,13 @@ func (c *Client) Query(key, value string) *Client {
 // On how it works, please refer to github.com/google/go-querystring repo
 func (c *Client) QueryStruct(queryStruct interface{}) *Client {
 	c.queryStructs = append(c.queryStructs, queryStruct)
+	return c
+}
+
+// BasicAuth allows simple username/password authentication
+func (c *Client) BasicAuth(username, password string) *Client {
+	c.auth.username = username
+	c.auth.password = password
 	return c
 }
 
