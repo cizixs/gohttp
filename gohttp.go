@@ -128,6 +128,7 @@ func (c *Client) Post(url string) (*http.Response, error) {
 }
 
 // Head handles HTTP HEAD request
+// HEAD request works the same way as GET, except the response body is empty.
 func (c *Client) Head(url string) (*http.Response, error) {
 	return c.Do("HEAD", url)
 }
@@ -203,10 +204,24 @@ func (jbd jsonBodyData) Body() (io.Reader, error) {
 	return buf, nil
 }
 
-// JSON accepts a struct as data, and sets it as body, and send it as application/json
+// JSON accepts a string as data, and sets it as body, and send it as application/json
 // If the actual method does not support body or json data, such as `GET`, `HEAD`,
 // it will be simply omitted.
-func (c *Client) JSON(bodyJSON interface{}) *Client {
+func (c *Client) JSON(bodyJSON string) *Client {
+	if bodyJSON != "" {
+		c.Header(contentType, jsonContentType)
+		//TODO: how to handle error
+		buf := &bytes.Buffer{}
+		buf.WriteString(bodyJSON)
+		c.body = buf
+	}
+	return c
+}
+
+// JSONStruct accepts a struct as data, and sets it as body, and send it as application/json
+// If the actual method does not support body or json data, such as `GET`, `HEAD`,
+// it will be simply omitted.
+func (c *Client) JSONStruct(bodyJSON interface{}) *Client {
 	if bodyJSON != nil {
 		c.Header(contentType, jsonContentType)
 		//TODO: how to handle error

@@ -234,12 +234,41 @@ func TestPostJSON(t *testing.T) {
 	}))
 	defer ts.Close()
 
+	resp, err := gohttp.New().JSON(`{"Name":"Cizixs"}`).Post(ts.URL)
+	assert.NoError(err, "Post request should cause no error.")
+	data, _ := ioutil.ReadAll(resp.Body)
+	returnedUser := User{}
+	json.Unmarshal(data, &returnedUser)
+
+	assert.Equal("Cizixs", returnedUser.Name)
+	assert.Equal(0, returnedUser.Age)
+}
+
+func TestPostJSONStruct(t *testing.T) {
+	assert := assert.New(t)
+
+	type User struct {
+		Title string `json:"title,omitempty"`
+		Name  string `json:"name,omitempty"`
+		Age   int    `json:"age,omitempty"`
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		data, _ := ioutil.ReadAll(r.Body)
+		if r.Header.Get("Content-Type") != "application/json" {
+			w.Write([]byte("No json data"))
+		} else {
+			fmt.Fprint(w, string(data))
+		}
+	}))
+	defer ts.Close()
+
 	user := User{
 		Title: "Test title",
 		Name:  "cizixs",
 	}
 
-	resp, err := gohttp.New().JSON(user).Post(ts.URL)
+	resp, err := gohttp.New().JSONStruct(user).Post(ts.URL)
 	assert.NoError(err, "Post request should cause no error.")
 	data, _ := ioutil.ReadAll(resp.Body)
 	returnedUser := User{}
