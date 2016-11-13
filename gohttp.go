@@ -237,3 +237,33 @@ func (c *Client) Body(body io.Reader) *Client {
 func Get(url string) (*http.Response, error) {
 	return DefaultClient.Get(url)
 }
+
+// Head provides a shortcut to send `HEAD` request
+func Head(url string) (*http.Response, error) {
+	return DefaultClient.Head(url)
+}
+
+// Delete provides a shortcut to send `DELETE` request
+func Delete(url string) (*http.Response, error) {
+	return DefaultClient.Delete(url)
+}
+
+// Options provides a shortcut to send `OPTIONS` request
+func Options(url string) (*http.Response, error) {
+	return DefaultClient.Options(url)
+}
+
+// Post provides a shortcut to send `POST` request
+func Post(url string, data io.Reader) (*http.Response, error) {
+	return DefaultClient.Body(data).Post(url)
+}
+
+// Put provides a shortcut to send `PUT` request
+func Put(url string, data io.Reader) (*http.Response, error) {
+	return DefaultClient.Body(data).Put(url)
+}
+
+// Patch provides a shortcut to send `PATCH` request
+func Patch(url string, data io.Reader) (*http.Response, error) {
+	return DefaultClient.Body(data).Patch(url)
+}
