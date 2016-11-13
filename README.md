@@ -3,28 +3,84 @@
 
 A simple to use golang http client
 
-## QuickStart
+## Features
+
+- All HTTP methods support: GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS
+- Easy to set HTTP Headers
+- Query strings can be added through key-value pairs or struct easily
+- Extend url path whenever you want
+- Send form and json data in one line
+
+## Principles
+
+- Simple: the exposed interface should be simple and intuitive. After all, this is why `gohttp` is created
+- Consistent: Derived from `net/http`, `gohttp` tries to keep consistent with it as much as possible
+
+## Install
+
+```bash
+go get github.com/cizixs/gohttp
+```
+
+## Usage
+
+We use [github API](https://developer.github.com/v3/) to illustrate how `gohttp` works, if you are not familiar with
+HTTP or github API, please read articles on these topics first.
 
 ### Get a resource from url
 
-    gohttp.Get("api.github.com/v2/users/cizixs")
-    gohttp.HEAD("api.github.com/v2/users/cizixs")
+`gohttp` provides shortcut to make simple `GET` quite straightforward:
+
+    resp, err := gohttp.Get("https://api.github.com/users/cizixs")
+
+The above does the same thing as:
+
+    resp, err := gohttp.New().Get("https://api.github.com/users/cizixs")
+
+In fact, this is exactly what it does behind the scene. 
+`gohttp.New()` returns `gohttp.Client` struct, which gives you full control of the request which be sent.
+
+### Create url path on the fly
+
+If url path can not decided until runtime or you want it be flexible, `Path()` method is here to help:
+
+    resp, err := gohttp.New().Path("/repos").Path("cizixs/gohttp/").Path("issues").Get("https://api.github.com/")
+
+Or simply in one method:
+
+    resp, err := gohttp.New().Path("/repos", "cizixs/gohttp/", "issues").Get("https://api.github.com/")
+
+Notice how `gohttp` handles the slash `/` appropriately no matter where it is placed(or not placed at all).
 
 ### Pass arguments(query string) in URLs 
 
-    gohttp.New().Query(key, value).Query(key, value).Get(url)
+There are often times you want to include query strings in url, handling this issue manually can be tiresome and boring.
+Not with `gohttp`:
 
-### Post and PUT
+    gohttp.New().Path("/repos", "cizixs/gohttp/", "issues").
+        Query("state", "open").Query("sort", "updated").Query("mentioned", "cizixs").
+        Get("https://api.github.com/")
 
-    gohttp.New().Data(data).Post(url)
-    gohttp.New().Data(data).Put(url)
+Think this is tedious too? Here comes the better part, you can pass a struct as query strings:
 
-**NOTE**: The actual data sent is based on HTTP method the request finally fires, 
-anything not compliant with that METHOD will be ommited if it does not cause any error.
-For example, set data to a `GET` request has no effect, because it will not be used at all.
+    type issueOption struct {
+    	State     string `json:"state,omitempty"`
+    	Assignee  string `json:"assignee,omitempty"`
+    	Creator   string `json:"creator,omitempty"`
+    	Mentioned string `json:"mentioned,omitempty"`
+    	Labels    string `json:"labels,omitempty"`
+    	Sort      string `json:"sort,omitempty"`
+    	Rirection string `json:"direction,omitempty"`
+    	Since     string `json:"since,omitempty"`
+    }
 
-### Response Data Streaming
-
+	i := &issueOption{
+		State:     "open",
+		Mentioned: "cizixs",
+		Sort:      "updated",
+	}
+	resp, err := gohttp.New().Path("/repos", "cizixs/gohttp/", "issues").QueryStruct(i).Get("https://api.github.com/")
+    
 ### Custom Headers
 
     gohttp.New().Header(key, value).Header(key, value).Get(url)
@@ -32,6 +88,17 @@ For example, set data to a `GET` request has no effect, because it will not be u
 Or, simply pass all headers in a map:
 
     gohttp.New().Headers(map[string]string).Get(url)
+
+### Post and PUT
+
+Not only `GET` is simple, `gohttp` implements all other methods:
+
+    gohttp.New().JSON(data).Post(url)
+    gohttp.New().JSON(data).Put(url)
+
+**NOTE**: The actual data sent is based on HTTP method the request finally fires.
+Anything not compliant with that METHOD will be ommited.
+For example, set data to a `GET` request has no effect, because it will not be used at all.
 
 ### Post all kinds of data
 
