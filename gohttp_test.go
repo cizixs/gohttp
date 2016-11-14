@@ -33,6 +33,62 @@ func TestGet(t *testing.T) {
 	assert.Equal(greeting, string(actualGreeting))
 }
 
+func TestResponseAsString(t *testing.T) {
+	assert := assert.New(t)
+
+	greeting := "hello, gohttp."
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, greeting)
+	}))
+	defer ts.Close()
+
+	resp, err := gohttp.Get(ts.URL)
+	assert.NoError(err, "A get request should cause no error.")
+	assert.Equal(http.StatusOK, resp.StatusCode)
+
+	actualGreeting, err := resp.AsString()
+	assert.NoError(err, "read the response body should not cause error.")
+	assert.Equal(greeting, actualGreeting)
+}
+
+func TestResponseAsBytes(t *testing.T) {
+	assert := assert.New(t)
+
+	greeting := "hello, gohttp."
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, greeting)
+	}))
+	defer ts.Close()
+
+	resp, err := gohttp.Get(ts.URL)
+	assert.NoError(err, "A get request should cause no error.")
+	assert.Equal(http.StatusOK, resp.StatusCode)
+
+	actualGreeting, err := resp.AsBytes()
+	assert.NoError(err, "read the response body should not cause error.")
+	assert.Equal([]byte(greeting), actualGreeting)
+}
+
+func TestResponseAsJSON(t *testing.T) {
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.Copy(w, r.Body)
+	}))
+	defer ts.Close()
+
+	resp, err := gohttp.New().JSON(`{"Name":"gohttp"}`).Post(ts.URL)
+	assert.NoError(err, "A get request should cause no error.")
+	assert.Equal(http.StatusOK, resp.StatusCode)
+
+	repo := &struct {
+		Name string `json:"name,omitempty"`
+	}{}
+	err = resp.AsJSON(repo)
+	assert.NoError(err, "read the response body should not cause error.")
+	assert.Equal("gohttp", repo.Name)
+}
+
 func TestHead(t *testing.T) {
 	assert := assert.New(t)
 

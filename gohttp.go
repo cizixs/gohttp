@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -24,10 +25,46 @@ type basicAuth struct {
 	password string
 }
 
+// fileForm wraps one file part of multiple files upload
 type fileForm struct {
 	fieldName string
 	filename  string
 	file      *os.File
+}
+
+// GoResponse wraps the official `http.Response`, and provides more features.
+// The main function is to parse resp body for users.
+// In the future, it can gives more information, like request elapsed time,
+// redirect history etc
+type GoResponse struct {
+	*http.Response
+}
+
+// AsString returns the response data as string
+func (resp *GoResponse) AsString() (string, error) {
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// AsBytes return the response body as byte slice
+func (resp *GoResponse) AsBytes() ([]byte, error) {
+	return ioutil.ReadAll(resp.Body)
+}
+
+// AsJSON parses response body to a struct
+// Usage:
+//    user := &User{}
+//    resp.AsJSON(user)
+//    fmt.Printf("%s\n", user.Name)
+func (resp *GoResponse) AsJSON(v interface{}) error {
+	data, err := resp.AsBytes()
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, v)
 }
 
 // Client is the main struct that wraps net/http
@@ -187,48 +224,51 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 // All other HTTP methods will call `Do` behind the scene, and
 // it can be used directly to send the request
 // Custom HTTP method can be sent with this method
-func (c *Client) Do(method, url string) (*http.Response, error) {
+func (c *Client) Do(method, url string) (*GoResponse, error) {
 	c.url = url
 	req, err := c.prepareRequest(method)
 	if err != nil {
 		return nil, err
 	}
-	return c.c.Do(req)
+	resp, err := c.c.Do(req)
+	return &GoResponse{resp}, err
 }
 
 // Get handles HTTP GET request, and return response to user
-func (c *Client) Get(url string) (*http.Response, error) {
+// Note that the response is not `http.Response`, but a thin wrapper which does
+// exactly what it used to and a little more.
+func (c *Client) Get(url string) (*GoResponse, error) {
 	return c.Do("GET", url)
 }
 
 // Post handles HTTP POST request
-func (c *Client) Post(url string) (*http.Response, error) {
+func (c *Client) Post(url string) (*GoResponse, error) {
 	return c.Do("POST", url)
 }
 
 // Head handles HTTP HEAD request
 // HEAD request works the same way as GET, except the response body is empty.
-func (c *Client) Head(url string) (*http.Response, error) {
+func (c *Client) Head(url string) (*GoResponse, error) {
 	return c.Do("HEAD", url)
 }
 
 // Put handles HTTP PUT request
-func (c *Client) Put(url string) (*http.Response, error) {
+func (c *Client) Put(url string) (*GoResponse, error) {
 	return c.Do("PUT", url)
 }
 
 // Delete handles HTTP DELETE request
-func (c *Client) Delete(url string) (*http.Response, error) {
+func (c *Client) Delete(url string) (*GoResponse, error) {
 	return c.Do("DELETE", url)
 }
 
 // Patch handles HTTP PATCH request
-func (c *Client) Patch(url string) (*http.Response, error) {
+func (c *Client) Patch(url string) (*GoResponse, error) {
 	return c.Do("PATCH", url)
 }
 
 // Options handles HTTP OPTIONS request
-func (c *Client) Options(url string) (*http.Response, error) {
+func (c *Client) Options(url string) (*GoResponse, error) {
 	return c.Do("OPTIONS", url)
 }
 
@@ -372,37 +412,37 @@ func (c *Client) File(f *os.File, fileName, fieldName string) *Client {
 }
 
 // Get provides a shortcut to send `GET` request
-func Get(url string) (*http.Response, error) {
+func Get(url string) (*GoResponse, error) {
 	return DefaultClient.Get(url)
 }
 
 // Head provides a shortcut to send `HEAD` request
-func Head(url string) (*http.Response, error) {
+func Head(url string) (*GoResponse, error) {
 	return DefaultClient.Head(url)
 }
 
 // Delete provides a shortcut to send `DELETE` request
 // It is used to remove a resource from server
-func Delete(url string) (*http.Response, error) {
+func Delete(url string) (*GoResponse, error) {
 	return DefaultClient.Delete(url)
 }
 
 // Options provides a shortcut to send `OPTIONS` request
-func Options(url string) (*http.Response, error) {
+func Options(url string) (*GoResponse, error) {
 	return DefaultClient.Options(url)
 }
 
 // Post provides a shortcut to send `POST` request
-func Post(url string, data io.Reader) (*http.Response, error) {
+func Post(url string, data io.Reader) (*GoResponse, error) {
 	return DefaultClient.Body(data).Post(url)
 }
 
 // Put provides a shortcut to send `PUT` request
-func Put(url string, data io.Reader) (*http.Response, error) {
+func Put(url string, data io.Reader) (*GoResponse, error) {
 	return DefaultClient.Body(data).Put(url)
 }
 
 // Patch provides a shortcut to send `PATCH` request
-func Patch(url string, data io.Reader) (*http.Response, error) {
+func Patch(url string, data io.Reader) (*GoResponse, error) {
 	return DefaultClient.Body(data).Patch(url)
 }
