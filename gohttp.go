@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -103,6 +104,10 @@ type Client struct {
 	// files represents an array of `os.File` instance, it is used to
 	// upload files to server
 	files []*fileForm
+
+	// proxy stores proxy url to use. If it is empty, `net/http` will try to load proxy configuration
+	// from environment variable.
+	proxy string
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -112,7 +117,6 @@ var DefaultClient = New()
 // New returns a new GoClient with default values
 func New() *Client {
 	return &Client{
-		c:            &http.Client{},
 		query:        make(map[string]string),
 		queryStructs: make([]interface{}, 0),
 		headers:      make(map[string]string),
@@ -123,6 +127,17 @@ func New() *Client {
 }
 
 func (c *Client) prepareRequest(method string) (*http.Request, error) {
+	// create the transport and client instance first
+	transport := &http.Transport{}
+	if c.proxy != "" {
+		proxy, err := url.Parse(c.proxy)
+		if err != nil {
+			return nil, err
+		}
+		transport.Proxy = http.ProxyURL(proxy)
+	}
+	c.c = &http.Client{Transport: transport}
+
 	// parse files in request.
 	// `gohttp` supports posting multiple files, for each file, there should be three component:
 	// - fieldName: the upload file button field name in the web. `<input type="file" name="files" multiple>`,
@@ -288,6 +303,17 @@ func (c *Client) Path(paths ...string) *Client {
 	return c
 }
 
+// Proxy sets proxy server the client uses.
+// If it is empty, `gohttp` will try to load proxy settings
+// from environment variable
+func (c *Client) Proxy(proxy string) *Client {
+	if proxy != "" {
+		c.proxy = proxy
+	}
+	return c
+}
+
+// Cookie set client cookie, the argument is a standard `http.Cookie`
 func (c *Client) Cookie(cookie *http.Cookie) *Client {
 	if cookie != nil {
 		c.cookies = append(c.cookies, cookie)
