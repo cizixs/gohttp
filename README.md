@@ -26,11 +26,18 @@ A simple to use golang http client
 
 - Simple: the exposed interface should be simple and intuitive. After all, this is why `gohttp` is created
 - Consistent: Derived from `net/http`, `gohttp` tries to keep consistent with it as much as possible
+- Fully-Documented: along with the simple interface, documents and examples will be given to demostrate the full usage, pitfalls and best practices
 
 ## Install
 
 ```bash
 go get github.com/cizixs/gohttp
+```
+
+And then import the package in your code:
+
+```go
+import "github.com/cizixs/gohttp"
 ```
 
 ## Usage
