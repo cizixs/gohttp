@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/go-querystring/query"
 )
@@ -36,12 +37,13 @@ type fileForm struct {
 // GoResponse wraps the official `http.Response`, and provides more features.
 // The main function is to parse resp body for users.
 // In the future, it can gives more information, like request elapsed time,
-// redirect history etc
+// redirect history etc.
 type GoResponse struct {
 	*http.Response
 }
 
 // AsString returns the response data as string
+// An error wil bw returned if the body can not be read as string
 func (resp *GoResponse) AsString() (string, error) {
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -51,6 +53,7 @@ func (resp *GoResponse) AsString() (string, error) {
 }
 
 // AsBytes return the response body as byte slice
+// An error will be returned if the body can not be read as bytes
 func (resp *GoResponse) AsBytes() ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
@@ -108,6 +111,11 @@ type Client struct {
 	// proxy stores proxy url to use. If it is empty, `net/http` will try to load proxy configuration
 	// from environment variable.
 	proxy string
+
+	// timeout sets the waiting time before request is finished
+	// If request exceeds the time, error will be returned.
+	// The default value zero means no timeout, which is what the `net/http` DefaultClient does.
+	timeout time.Duration
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -126,6 +134,11 @@ func New() *Client {
 	}
 }
 
+// prepareRequest does all the preparation jobs for `gohttp`.
+// The main job is create and configure all structs like `Transport`, `Dialer`, `Client`
+// according to arguments passed to `gohttp`.
+// TODO(cizixs): This method is getting longer and longer, will try to tidy it up, and
+// move some content to individual functions.
 func (c *Client) prepareRequest(method string) (*http.Request, error) {
 	// create the transport and client instance first
 	transport := &http.Transport{}
@@ -137,6 +150,11 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 		transport.Proxy = http.ProxyURL(proxy)
 	}
 	c.c = &http.Client{Transport: transport}
+
+	// timeout zero means no timeout
+	if c.timeout != time.Duration(0) {
+		c.c.Timeout = c.timeout
+	}
 
 	// parse files in request.
 	// `gohttp` supports posting multiple files, for each file, there should be three component:
@@ -306,10 +324,27 @@ func (c *Client) Path(paths ...string) *Client {
 // Proxy sets proxy server the client uses.
 // If it is empty, `gohttp` will try to load proxy settings
 // from environment variable
+//
+// Usage:
+//    gohttp.New().Proxy("http://127.0.0.1:4567").Get("http://someurl.com")
 func (c *Client) Proxy(proxy string) *Client {
 	if proxy != "" {
 		c.proxy = proxy
 	}
+	return c
+}
+
+// Timeout sets the wait limit for a request to finish.
+// This time includes connection time, redirectoin time, and
+// read response body time. If request does not finish before the timeout,
+// any ongoing action will be interrupted and an error will return
+//
+// Usage:
+//    gohttp.New().Timeout(time.Second * 10).Get(url)
+func (c *Client) Timeout(timeout time.Duration) *Client {
+	// TODO(cizixs): add other timeouts like setup connection timeout,
+	// TLS shakehand timeout,  etc
+	c.timeout = timeout
 	return c
 }
 
