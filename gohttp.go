@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -22,18 +24,45 @@ type basicAuth struct {
 	password string
 }
 
+type fileForm struct {
+	fieldName string
+	filename  string
+	file      *os.File
+}
+
 // Client is the main struct that wraps net/http
 type Client struct {
 	c *http.Client
 
-	// request parameters
-	query        map[string]string
+	// query string, query string is a key-value pair follows a
+	// url path, and they are encoded in url to escape special characters
+	query map[string]string
+
+	// query string from struct data
 	queryStructs []interface{}
-	headers      map[string]string
-	url          string
-	path         string
-	body         io.Reader
-	auth         basicAuth
+
+	// http headers
+	headers map[string]string
+
+	// base url, this is sheme + host, but can be any valid url
+	url string
+
+	// additional url path, it will be joined with `url` to get the final
+	// request url
+	path string
+
+	// request body, it should be readble. Body is used in `POST`, `PUT` method to send data
+	// to server. How body should be parsed is in the `Content-Type` header.
+	// For example, `application/json` means the body is a valid json string,
+	// `application/x-www-form-urlencoed` means the body is form data, and it is encoded same as url.
+	body io.Reader
+
+	// basic authentication, just plain username and password
+	auth basicAuth
+
+	// files represents an array of `os.File` instance, it is used to
+	// upload files to server
+	files []*fileForm
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -45,13 +74,50 @@ func New() *Client {
 	return &Client{
 		c:            &http.Client{},
 		query:        make(map[string]string),
-		queryStructs: make([]interface{}, 5),
+		queryStructs: make([]interface{}, 0),
 		headers:      make(map[string]string),
 		auth:         basicAuth{},
+		files:        make([]*fileForm, 0),
 	}
 }
 
 func (c *Client) prepareRequest(method string) (*http.Request, error) {
+	// parse files in request.
+	// `gohttp` supports posting multiple files, for each file, there should be three component:
+	// - fieldName: the upload file button field name in the web. `<input type="file" name="files" multiple>`,
+	//   For instance, fieldname would be `files` in this case.
+	// - filename: filename string denotes the file to be uploaded. This can be set manually, or extracted from filepath
+	// - file content: the actual file data. Ideally, users can pass a filepath, or a os.File instance, or a []byte slice, or a string
+	//   as file content
+	// On how `multipart/form-data` works, please refer to RFC7578 and RFC 2046.
+	if len(c.files) > 0 {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		// for each file, write fieldname, filename, and file content to the body
+		for _, file := range c.files {
+			part, err := writer.CreateFormFile(file.fieldName, file.filename)
+			if err != nil {
+				return nil, err
+			}
+			_, err = io.Copy(part, file.file)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		err := writer.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		// finally, get the real content type, and set the header
+		multipartContentType := writer.FormDataContentType()
+		c.Header(contentType, multipartContentType)
+		c.body = body
+	}
+
+	// create the basci request
 	req, err := http.NewRequest(method, c.url, c.body)
 
 	// concatenate path to url if exists
@@ -108,6 +174,9 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 }
 
 // Do takes HTTP and url, then makes the request, return the response
+// All other HTTP methods will call `Do` behind the scene, and
+// it can be used directly to send the request
+// Custom HTTP method can be sent with this method
 func (c *Client) Do(method, url string) (*http.Response, error) {
 	c.url = url
 	req, err := c.prepareRequest(method)
@@ -156,6 +225,10 @@ func (c *Client) Options(url string) (*http.Response, error) {
 // Path concatenates base url with resource path.
 // Path can be with or without slash `/` at both end,
 // it will be handled properly.
+//
+// Usage:
+//    gohttp.New().Path("users/cizixs").Get("someurl.com")
+//
 func (c *Client) Path(paths ...string) *Client {
 	for _, path := range paths {
 		if path != "" {
@@ -269,6 +342,18 @@ func (c *Client) Body(body io.Reader) *Client {
 	return c
 }
 
+// File adds a file in request body, and sends it to server
+// Multiple files can be added by calling this method many times
+func (c *Client) File(f *os.File, fileName, fieldName string) *Client {
+	ff := &fileForm{}
+	ff.filename = fileName
+	ff.fieldName = fieldName
+	ff.file = f
+
+	c.files = append(c.files, ff)
+	return c
+}
+
 // Get provides a shortcut to send `GET` request
 func Get(url string) (*http.Response, error) {
 	return DefaultClient.Get(url)
@@ -280,6 +365,7 @@ func Head(url string) (*http.Response, error) {
 }
 
 // Delete provides a shortcut to send `DELETE` request
+// It is used to remove a resource from server
 func Delete(url string) (*http.Response, error) {
 	return DefaultClient.Delete(url)
 }

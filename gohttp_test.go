@@ -3,9 +3,11 @@ package gohttp_test
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -277,4 +279,47 @@ func TestPostJSONStruct(t *testing.T) {
 	assert.Equal("Test title", returnedUser.Title)
 	assert.Equal("cizixs", returnedUser.Name)
 	assert.Equal(0, returnedUser.Age)
+}
+
+func TestPostFiles(t *testing.T) {
+	assert := assert.New(t)
+
+	// the mock http server will parse files uploaded, and send `filename:fileLength` string back to client
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reader, err := r.MultipartReader()
+		if err != nil {
+			fmt.Fprintf(w, "Ops: %v\n", err)
+		} else {
+			files := []string{}
+			for {
+				part, err := reader.NextPart()
+				if err == io.EOF || part == nil {
+					break
+				}
+				if err != nil {
+					continue
+				}
+				if part.FileName() == "" {
+					fmt.Fprintf(w, "Ops: empty file name\n")
+					continue
+				}
+				data, err := ioutil.ReadAll(part)
+				if err != nil {
+					fmt.Fprintf(w, "Ops: %v\n", err)
+				}
+				files = append(files, fmt.Sprintf("%s:%d", part.FileName(), len(string(data))))
+			}
+			fmt.Fprintf(w, strings.Join(files, "&"))
+		}
+	}))
+
+	filename := "./LICENSE"
+	f, _ := os.Open(filename)
+	resp, _ := gohttp.New().File(f, "hello.txt", "myfiled").Post(ts.URL)
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Ops-Ops: %v\n", err)
+	}
+
+	assert.Equal("hello.txt:1063", string(data))
 }
