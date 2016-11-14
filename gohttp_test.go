@@ -118,6 +118,22 @@ func TestPut(t *testing.T) {
 	assert.Equal("PUT", string(method))
 }
 
+func TestCookie(t *testing.T) {
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "%v", r.Cookies())
+	}))
+	defer ts.Close()
+
+	cookie := &http.Cookie{Name: "foo", Value: "bar"}
+
+	resp, err := gohttp.New().Cookie(cookie).Get(ts.URL)
+	assert.NoError(err, "Get request with cookie should cause no error.")
+	data, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("[foo=bar]", string(data))
+}
+
 func TestGetWithPath(t *testing.T) {
 	assert := assert.New(t)
 

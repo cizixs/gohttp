@@ -60,6 +60,9 @@ type Client struct {
 	// basic authentication, just plain username and password
 	auth basicAuth
 
+	// cookies store request cookie, and send it to server
+	cookies []*http.Cookie
+
 	// files represents an array of `os.File` instance, it is used to
 	// upload files to server
 	files []*fileForm
@@ -77,6 +80,7 @@ func New() *Client {
 		queryStructs: make([]interface{}, 0),
 		headers:      make(map[string]string),
 		auth:         basicAuth{},
+		cookies:      make([]*http.Cookie, 0),
 		files:        make([]*fileForm, 0),
 	}
 }
@@ -161,6 +165,12 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 		}
 	}
 
+	// set cookies
+	if len(c.cookies) != 0 {
+		for _, cookie := range c.cookies {
+			req.AddCookie(cookie)
+		}
+	}
 	// set basic auth if exists
 	if c.auth.username != "" && c.auth.password != "" {
 		req.SetBasicAuth(c.auth.username, c.auth.password)
@@ -234,6 +244,13 @@ func (c *Client) Path(paths ...string) *Client {
 		if path != "" {
 			c.path = filepath.Join(c.path, path)
 		}
+	}
+	return c
+}
+
+func (c *Client) Cookie(cookie *http.Cookie) *Client {
+	if cookie != nil {
+		c.cookies = append(c.cookies, cookie)
 	}
 	return c
 }
