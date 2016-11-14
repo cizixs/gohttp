@@ -9,11 +9,18 @@ A simple to use golang http client
 
 ## Features
 
-- All HTTP methods support: GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS
-- Easy to set HTTP Headers
-- Query strings can be added through key-value pairs or struct easily
-- Extend url path whenever you want
-- Send form and json data in one line
+- [x] All HTTP methods support: GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS
+- [x] Easy to set HTTP Headers
+- [x] Query strings can be added through key-value pairs or struct easily
+- [x] Extend url path whenever you want
+- [x] Send form and json data in one line
+- [x] Basic Auth right away
+- [ ] Allow set timeout at all levels
+- [ ] Support proxy configuration
+- [ ] Automatically retry request, if you let it
+- [ ] Custom redirect policy
+- [ ] Perform hook functions
+- More to come ...
 
 ## Principles
 
