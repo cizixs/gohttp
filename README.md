@@ -28,9 +28,6 @@ go get github.com/cizixs/gohttp
 
 ## Usage
 
-We use [github API](https://developer.github.com/v3/) to illustrate how `gohttp` works, if you are not familiar with
-HTTP or github API, please read articles on these topics first.
-
 ### Get a resource from url
 
 `gohttp` provides shortcut to make simple `GET` quite straightforward:
@@ -97,8 +94,9 @@ Or, simply pass all headers in a map:
 
 Not only `GET` is simple, `gohttp` implements all other methods:
 
-    gohttp.New().JSON(data).Post(url)
-    gohttp.New().JSON(data).Put(url)
+    body := strings.NewReader("hello, gohttp!")
+    gohttp.New().Body(body).Post("https://httpbin.org/post")
+    gohttp.New().Body(body).Put("https://httpbin.org/put")
 
 **NOTE**: The actual data sent is based on HTTP method the request finally fires.
 Anything not compliant with that METHOD will be ommited.
@@ -106,13 +104,23 @@ For example, set data to a `GET` request has no effect, because it will not be u
 
 ### Post all kinds of data
 
-    g := gohttp.New()
-    // send form data, key=value pairs
-    g.Form(key, value).Form(key, value).Post(url)
+When comes to sending data to server, `POST` might be the most frequently used method.
+Of all user cases, send form data and send json data comes to the top. 
+`gohttp` tries to make these actions easy:
+
+    // send Form data
+    gohttp.New().Form("username", "cizixs").Form("password", "secret").Post("https://somesite.com/login")
 
     // send json data
-    g.Json(string).Post(url)         // use a marshalled json string
-    g.JsonStruct(struct).Post(url)   // use a struct and parse it to json
+    gohttp.New().Json(`{"Name":"Cizixs"}`).Post(url)         // use a marshalled json string
+
+    struct User{
+        Name string `json:"name,omitempty"`
+        Age int `json:"age,omitempty"`
+    }
+
+    user := &User{Name: "cizixs", Age: 22}
+    gohttp.New().JsonStruct(user).Post(url)   // use a struct and parse it to json
 
 ### Upload file(s)
 
@@ -165,16 +173,13 @@ All parameters will be merged with existing ones(if merge is supported, like `he
 
 TODO
 
-## Shortcuts
-
-### Handle json response
-
-    var user User
-    gohttp.New().Json(url, &user)
-
 ## Authentication
 
-TODO
+### Basic Auth
+
+```go
+gohttp.New().BasicAuth("username", "password").Get("https://api.github.com/users/")
+```
 
 ## Proxies
 
