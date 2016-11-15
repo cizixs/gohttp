@@ -116,6 +116,9 @@ type Client struct {
 	// If request exceeds the time, error will be returned.
 	// The default value zero means no timeout, which is what the `net/http` DefaultClient does.
 	timeout time.Duration
+
+	// TLSHandshakeTimeout limits the time spent performing TLS handshake
+	tlsHandshakeTimeout time.Duration
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -134,28 +137,37 @@ func New() *Client {
 	}
 }
 
-// prepareRequest does all the preparation jobs for `gohttp`.
-// The main job is create and configure all structs like `Transport`, `Dialer`, `Client`
-// according to arguments passed to `gohttp`.
-// TODO(cizixs): This method is getting longer and longer, will try to tidy it up, and
-// move some content to individual functions.
-func (c *Client) prepareRequest(method string) (*http.Request, error) {
+// setupClient handles the connection details from http client to TCP connections.
+// Timeout, proxy, TLS config ..., these are very important but rarely used directly
+// by httpclient users.
+func (c *Client) setupClient() error {
 	// create the transport and client instance first
 	transport := &http.Transport{}
 	if c.proxy != "" {
+		// use passed proxy, otherwise try to use environment variable proxy, or just no proxy at all.
 		proxy, err := url.Parse(c.proxy)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		transport.Proxy = http.ProxyURL(proxy)
 	}
+
+	if c.tlsHandshakeTimeout != time.Duration(0) {
+		transport.TLSHandshakeTimeout = c.tlsHandshakeTimeout
+	}
+
 	c.c = &http.Client{Transport: transport}
 
+	// request timeout limit
 	// timeout zero means no timeout
+	// NOTE: `Timeout` property is only supported from go1.3+
 	if c.timeout != time.Duration(0) {
 		c.c.Timeout = c.timeout
 	}
+	return nil
+}
 
+func (c *Client) prepareFiles() error {
 	// parse files in request.
 	// `gohttp` supports posting multiple files, for each file, there should be three component:
 	// - fieldName: the upload file button field name in the web. `<input type="file" name="files" multiple>`,
@@ -172,23 +184,42 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 		for _, file := range c.files {
 			part, err := writer.CreateFormFile(file.fieldName, file.filename)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			_, err = io.Copy(part, file.file)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 
 		err := writer.Close()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		// finally, get the real content type, and set the header
 		multipartContentType := writer.FormDataContentType()
 		c.Header(contentType, multipartContentType)
 		c.body = body
+	}
+
+	return nil
+}
+
+// prepareRequest does all the preparation jobs for `gohttp`.
+// The main job is create and configure all structs like `Transport`, `Dialer`, `Client`
+// according to arguments passed to `gohttp`.
+// TODO(cizixs): This method is getting longer and longer, will try to tidy it up, and
+// move some content to individual functions.
+func (c *Client) prepareRequest(method string) (*http.Request, error) {
+	err := c.setupClient()
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.prepareFiles()
+	if err != nil {
+		return nil, err
 	}
 
 	// create the basci request
@@ -343,8 +374,13 @@ func (c *Client) Proxy(proxy string) *Client {
 //    gohttp.New().Timeout(time.Second * 10).Get(url)
 func (c *Client) Timeout(timeout time.Duration) *Client {
 	// TODO(cizixs): add other timeouts like setup connection timeout,
-	// TLS shakehand timeout,  etc
 	c.timeout = timeout
+	return c
+}
+
+// TLSHandshakeTimeout sets the wait limit for performing TLS handshake
+func (c *Client) TLSHandshakeTimeout(timeout time.Duration) *Client {
+	c.tlsHandshakeTimeout = timeout
 	return c
 }
 

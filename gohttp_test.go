@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -172,6 +173,18 @@ func TestPut(t *testing.T) {
 	resp, _ := gohttp.Put(ts.URL, nil)
 	method, _ := ioutil.ReadAll(resp.Body)
 	assert.Equal("PUT", string(method))
+}
+
+func TestTimeout(t *testing.T) {
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(1000 * time.Millisecond)
+	}))
+	defer ts.Close()
+
+	_, err := gohttp.New().Timeout(100 * time.Millisecond).Get(ts.URL)
+	assert.Error(err, "request should have timed out")
 }
 
 func TestCookie(t *testing.T) {
