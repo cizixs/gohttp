@@ -15,11 +15,13 @@ A simple to use golang http client
 - [x] Extend url path whenever you want
 - [x] Send form and json data in one line
 - [x] Basic Auth right away
-- [ ] Allow set timeout at all levels
-- [ ] Support proxy configuration
+- [x] Read from response the easy way
+- [x] Support proxy configuration
+- [x] Allow set timeout at all levels
 - [ ] Automatically retry request, if you let it
 - [ ] Custom redirect policy
 - [ ] Perform hook functions
+- [ ] Session support, persistent response data, and reuse them in next request
 - More to come ...
 
 ## Principles
@@ -136,69 +138,60 @@ Of all user cases, send form data and send json data comes to the top.
     user := &User{Name: "cizixs", Age: 22}
     gohttp.New().JsonStruct(user).Post(url)   // use a struct and parse it to json
 
-### Upload file(s)
-
-    gohttp.New().File(f Reader).File(f Reader).Post(url)
-    gohttp.New().Files(f []Reader).Post(url)
-
-### Redirects
-
-By default, `gohttp` follows redirect automatically, 
-If do not want to follow redirect, and return the response as it is:
-
-    gohttp.New().FollowRedict(false).Get()
-
-### Timeout
-
-    gohttp.New().Timeout(timeout).Get()
-
-## Cookies
-
-Access cookie from response is simple:
-
-    cookies := resp.Cookies()
-
-    gohttp.New().Cookie(key, value string).Cookie(key, value string).Get(url)
-    gohttp.New().Cookies(map[string]string).Get(url)
-
-For more control, use CookieJar(specify cookie idle time, host, url etc):
-
-    gohttp.New().CookieJar(cj).Get()
-
-## Errors and Exceptions
-
-TODO:
-When to raise errors, and how many kind of errors.
-
-## Session
-
-Client gives you flexibility on how to sent each request, which `session` helps to
-persistent certain parameters across requests.
-
-The most common usage would be persisting cookies, making it possible to handle login.
-
-    s := gohttp.NewSession()
-    s.Form(user, pass).Post(url)
-    s.Get(url)
-
-All parameters will be merged with existing ones(if merge is supported, like `header`) or overided(like `timeout`) by.
-
-## HTTPS
-
-TODO
-
-## Authentication
-
 ### Basic Auth
 
 ```go
 gohttp.New().BasicAuth("username", "password").Get("https://api.github.com/users/")
 ```
 
-## Proxies
+### Timeout
 
-TODO
+By default, `net/http` does not have timeout, will wait forever until response is returned.
+This can be a serious issue if server hangs, `gohttp` allows you to set a timeout limit,
+if response does not finish in time, an error will be returned.
 
-## Hooks
+    gohttp.New().Timeout(100*time.Millisecond).Get()
 
-Hooks let you perform some actions at certain checkpoint.
+### Upload file(s)
+
+Upload files is simple too, multiple files can be uploaded in one request.
+
+    f, _ := os.Open(filePath)
+    gohttp.New().File(f io.Reader, "filename", "fieldname").Post(url)
+
+### Proxy
+
+If you are sending request behind a proxy, you can do this:
+
+    gohttp.New().Proxy("http://127.0.0.1:4567").Get("http://target.com/cool")
+
+### Cookies
+
+Access cookie from response is simple:
+
+    cookies := resp.Cookies()
+
+    gohttp.New().Cookie(cookie *http.Cookie).Cookie(cookie *http.Cookie).Get(url)
+
+### Response data as string
+
+If the response contains string data, you can read it by:
+
+    resp, _ := gohttp.New().Get("http://someurl.com")
+    data, _ := resp.AsString()
+
+
+### Response data as bytes
+
+If the response contains raw bytes, you can read it by:
+
+    resp, _ := gohttp.New().Get("http://someurl.com")
+    data, _ := resp.AsBytes()
+
+### Response data as json struct
+
+If the response contains json struct, you can pass a struct to it, and `gohttp` will marshall it for you:
+
+    user := &User{}
+    resp, _ := gohttp.New().Get("http://someurl.com")
+    err := resp.AsJSON(user)
