@@ -22,6 +22,10 @@ const (
 	formContentType = "application/x-www-form-urlencoded"
 )
 
+// DefaultTimeout defines the request timeout limit, avoiding client hanging when the
+// remote server does not responde.
+const DefaultTimeout = 3 * time.Second
+
 type basicAuth struct {
 	username string
 	password string
@@ -134,6 +138,7 @@ func New() *Client {
 		auth:         basicAuth{},
 		cookies:      make([]*http.Cookie, 0),
 		files:        make([]*fileForm, 0),
+		timeout:      DefaultTimeout,
 	}
 }
 
