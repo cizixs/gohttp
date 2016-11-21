@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Gohttp by cizixs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Gohttp</h1>
+      <h2 class="project-tagline">A simple to use golang http client</h2>
+      <a href="https://github.com/cizixs/gohttp" class="btn">View on GitHub</a>
+      <a href="https://github.com/cizixs/gohttp/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/cizixs/gohttp/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="gohttp" class="anchor" href="#gohttp" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>gohttp</h1>
+
+<p><a href="https://travis-ci.org/cizixs/gohttp"><img src="https://travis-ci.org/cizixs/gohttp.svg?branch=master" alt="Travis-ci Status"></a>
+<a href="https://coveralls.io/github/cizixs/gohttp?branch=master"><img src="https://coveralls.io/repos/github/cizixs/gohttp/badge.svg?branch=master" alt="Coverage Status"></a>
+<a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square" alt="Software License"></a>
+<a href="https://goreportcard.com/report/github.com/cizixs/gohttp"><img src="https://goreportcard.com/badge/github.com/cizixs/gohttp" alt="Go Report Card"></a>
+<a href="https://godoc.org/github.com/cizixs/gohttp"><img src="https://godoc.org/github.com/cizixs/gohttp?status.svg" alt="GoDoc"></a></p>
+
+<p>A simple to use golang http client</p>
+
+<h2>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Features</h2>
+
+<ul>
+<li>[x] All HTTP methods support: GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS</li>
+<li>[x] Easy to set HTTP Headers</li>
+<li>[x] Query strings can be added through key-value pairs or struct easily</li>
+<li>[x] Extend url path whenever you want</li>
+<li>[x] Send form and json data in one line</li>
+<li>[x] Basic Auth right away</li>
+<li>[x] Read from response the easy way</li>
+<li>[x] Support proxy configuration</li>
+<li>[x] Allow set timeout at all levels</li>
+<li>[ ] Automatically retry request, if you let it</li>
+<li>[ ] Custom redirect policy</li>
+<li>[ ] Perform hook functions</li>
+<li>[ ] Session support, persistent response data, and reuse them in next request</li>
+<li>More to come ...</li>
+</ul>
+
+<h2>
+<a id="principles" class="anchor" href="#principles" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Principles</h2>
+
+<ul>
+<li>Simple: the exposed interface should be simple and intuitive. After all, this is why <code>gohttp</code> is created</li>
+<li>Consistent: Derived from <code>net/http</code>, <code>gohttp</code> tries to keep consistent with it as much as possible</li>
+<li>Fully-Documented: along with the simple interface, documents and examples will be given to demostrate the full usage, pitfalls and best practices</li>
+</ul>
+
+<h2>
+<a id="install" class="anchor" href="#install" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Install</h2>
+
+<div class="highlight highlight-source-shell"><pre>go get github.com/cizixs/gohttp</pre></div>
+
+<p>And then import the package in your code:</p>
+
+<div class="highlight highlight-source-go"><pre><span class="pl-k">import</span> <span class="pl-s"><span class="pl-pds">"</span>github.com/cizixs/gohttp<span class="pl-pds">"</span></span></pre></div>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h2>
+
+<h3>
+<a id="get-a-resource-from-url" class="anchor" href="#get-a-resource-from-url" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Get a resource from url</h3>
+
+<p><code>gohttp</code> provides shortcut to make simple <code>GET</code> quite straightforward:</p>
+
+<pre><code>resp, err := gohttp.Get("https://api.github.com/users/cizixs")
+</code></pre>
+
+<p>The above does the same thing as:</p>
+
+<pre><code>resp, err := gohttp.New().Get("https://api.github.com/users/cizixs")
+</code></pre>
+
+<p>In fact, this is exactly what it does behind the scene. 
+<code>gohttp.New()</code> returns <code>gohttp.Client</code> struct, which gives you full control of the request which be sent.</p>
+
+<h3>
+<a id="create-url-path-on-the-fly" class="anchor" href="#create-url-path-on-the-fly" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Create url path on the fly</h3>
+
+<p>If url path can not decided until runtime or you want it be flexible, <code>Path()</code> method is here to help:</p>
+
+<pre><code>resp, err := gohttp.New().Path("/repos").Path("cizixs/gohttp/").Path("issues").Get("https://api.github.com/")
+</code></pre>
+
+<p>Or simply in one method:</p>
+
+<pre><code>resp, err := gohttp.New().Path("/repos", "cizixs/gohttp/", "issues").Get("https://api.github.com/")
+</code></pre>
+
+<p>Notice how <code>gohttp</code> handles the slash <code>/</code> appropriately no matter where it is placed(or not placed at all).</p>
+
+<h3>
+<a id="pass-argumentsquery-string-in-urls" class="anchor" href="#pass-argumentsquery-string-in-urls" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Pass arguments(query string) in URLs</h3>
+
+<p>There are often times you want to include query strings in url, handling this issue manually can be tiresome and boring.
+Not with <code>gohttp</code>:</p>
+
+<pre><code>gohttp.New().Path("/repos", "cizixs/gohttp/", "issues").
+    Query("state", "open").Query("sort", "updated").Query("mentioned", "cizixs").
+    Get("https://api.github.com/")
+</code></pre>
+
+<p>Think this is tedious too? Here comes the better part, you can pass a struct as query strings:</p>
+
+<pre><code>type issueOption struct {
+    State     string `json:"state,omitempty"`
+    Assignee  string `json:"assignee,omitempty"`
+    Creator   string `json:"creator,omitempty"`
+    Mentioned string `json:"mentioned,omitempty"`
+    Labels    string `json:"labels,omitempty"`
+    Sort      string `json:"sort,omitempty"`
+    Rirection string `json:"direction,omitempty"`
+    Since     string `json:"since,omitempty"`
+}
+
+i := &amp;issueOption{
+    State:     "open",
+    Mentioned: "cizixs",
+    Sort:      "updated",
+}
+resp, err := gohttp.New().Path("/repos", "cizixs/gohttp/", "issues").QueryStruct(i).Get("https://api.github.com/")
+</code></pre>
+
+<h3>
+<a id="custom-headers" class="anchor" href="#custom-headers" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Custom Headers</h3>
+
+<pre><code>gohttp.New().Header(key, value).Header(key, value).Get(url)
+</code></pre>
+
+<p>Or, simply pass all headers in a map:</p>
+
+<pre><code>gohttp.New().Headers(map[string]string).Get(url)
+</code></pre>
+
+<h3>
+<a id="post-and-put" class="anchor" href="#post-and-put" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Post and PUT</h3>
+
+<p>Not only <code>GET</code> is simple, <code>gohttp</code> implements all other methods:</p>
+
+<pre><code>body := strings.NewReader("hello, gohttp!")
+gohttp.New().Body(body).Post("https://httpbin.org/post")
+gohttp.New().Body(body).Put("https://httpbin.org/put")
+</code></pre>
+
+<p><strong>NOTE</strong>: The actual data sent is based on HTTP method the request finally fires.
+Anything not compliant with that METHOD will be ommited.
+For example, set data to a <code>GET</code> request has no effect, because it will not be used at all.</p>
+
+<h3>
+<a id="post-all-kinds-of-data" class="anchor" href="#post-all-kinds-of-data" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Post all kinds of data</h3>
+
+<p>When comes to sending data to server, <code>POST</code> might be the most frequently used method.
+Of all user cases, send form data and send json data comes to the top. 
+<code>gohttp</code> tries to make these actions easy:</p>
+
+<pre><code>// send Form data
+gohttp.New().Form("username", "cizixs").Form("password", "secret").Post("https://somesite.com/login")
+
+// send json data
+gohttp.New().Json(`{"Name":"Cizixs"}`).Post(url)         // use a marshalled json string
+
+struct User{
+    Name string `json:"name,omitempty"`
+    Age int `json:"age,omitempty"`
+}
+
+user := &amp;User{Name: "cizixs", Age: 22}
+gohttp.New().JsonStruct(user).Post(url)   // use a struct and parse it to json
+</code></pre>
+
+<h3>
+<a id="basic-auth" class="anchor" href="#basic-auth" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Basic Auth</h3>
+
+<div class="highlight highlight-source-go"><pre>gohttp.<span class="pl-c1">New</span>().<span class="pl-c1">BasicAuth</span>(<span class="pl-s"><span class="pl-pds">"</span>username<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>password<span class="pl-pds">"</span></span>).<span class="pl-c1">Get</span>(<span class="pl-s"><span class="pl-pds">"</span>https://api.github.com/users/<span class="pl-pds">"</span></span>)</pre></div>
+
+<h3>
+<a id="timeout" class="anchor" href="#timeout" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Timeout</h3>
+
+<p>By default, <code>net/http</code> does not have timeout, will wait forever until response is returned.
+This can be a serious issue if server hangs, <code>gohttp</code> allows you to set a timeout limit,
+if response does not finish in time, an error will be returned.</p>
+
+<pre><code>gohttp.New().Timeout(100*time.Millisecond).Get()
+</code></pre>
+
+<h3>
+<a id="upload-files" class="anchor" href="#upload-files" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Upload file(s)</h3>
+
+<p>Upload files is simple too, multiple files can be uploaded in one request.</p>
+
+<pre><code>f, _ := os.Open(filePath)
+gohttp.New().File(f io.Reader, "filename", "fieldname").Post(url)
+</code></pre>
+
+<h3>
+<a id="proxy" class="anchor" href="#proxy" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Proxy</h3>
+
+<p>If you are sending request behind a proxy, you can do this:</p>
+
+<pre><code>gohttp.New().Proxy("http://127.0.0.1:4567").Get("http://target.com/cool")
+</code></pre>
+
+<h3>
+<a id="cookies" class="anchor" href="#cookies" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Cookies</h3>
+
+<p>Access cookie from response is simple:</p>
+
+<pre><code>cookies := resp.Cookies()
+
+gohttp.New().Cookie(cookie *http.Cookie).Cookie(cookie *http.Cookie).Get(url)
+</code></pre>
+
+<h3>
+<a id="response-data-as-string" class="anchor" href="#response-data-as-string" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Response data as string</h3>
+
+<p>If the response contains string data, you can read it by:</p>
+
+<pre><code>resp, _ := gohttp.New().Get("http://someurl.com")
+data, _ := resp.AsString()
+</code></pre>
+
+<h3>
+<a id="response-data-as-bytes" class="anchor" href="#response-data-as-bytes" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Response data as bytes</h3>
+
+<p>If the response contains raw bytes, you can read it by:</p>
+
+<pre><code>resp, _ := gohttp.New().Get("http://someurl.com")
+data, _ := resp.AsBytes()
+</code></pre>
+
+<h3>
+<a id="response-data-as-json-struct" class="anchor" href="#response-data-as-json-struct" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Response data as json struct</h3>
+
+<p>If the response contains json struct, you can pass a struct to it, and <code>gohttp</code> will marshall it for you:</p>
+
+<pre><code>user := &amp;User{}
+resp, _ := gohttp.New().Get("http://someurl.com")
+err := resp.AsJSON(user)
+</code></pre>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/cizixs/gohttp">Gohttp</a> is maintained by <a href="https://github.com/cizixs">cizixs</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
