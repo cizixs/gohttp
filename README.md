@@ -195,3 +195,7 @@ If the response contains json struct, you can pass a struct to it, and `gohttp` 
     user := &User{}
     resp, _ := gohttp.New().Get("http://someurl.com")
     err := resp.AsJSON(user)
+
+## License
+
+[MIT License](https://github.com/cizixs/gohttp/blob/master/LICENSE)

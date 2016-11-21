@@ -203,18 +203,57 @@ func TestCookie(t *testing.T) {
 	assert.Equal("[foo=bar]", string(data))
 }
 
+func TestGetWithURL(t *testing.T) {
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "http://%s", r.Host)
+	}))
+	defer ts.Close()
+
+	// Set url use `URL` method instead of as method parameter
+	resp, err := gohttp.New().URL(ts.URL).Get("")
+
+	assert.NoError(err, "Get request with url should cause no error.")
+	data, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal(ts.URL, string(data))
+}
+
 func TestGetWithPath(t *testing.T) {
 	assert := assert.New(t)
+
+	cases := []struct {
+		input    string // input path
+		expected string // expected path
+	}{
+		{"/cizixs", "/cizixs"},
+		{"/cizixs/", "/cizixs"},
+		{"cizixs", "/cizixs"},
+		{"cizixs/", "/cizixs"},
+		{"/users/cizixs/", "/users/cizixs"},
+		{"/users/cizixs", "/users/cizixs"},
+		{"users/cizixs", "/users/cizixs"},
+		{"users/cizixs/", "/users/cizixs"},
+	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, r.URL.Path)
 	}))
 	defer ts.Close()
 
-	resp, err := gohttp.New().Path("/users").Path("cizixs").Get(ts.URL)
-	assert.NoError(err, "Get request with path should cause no error.")
+	for _, tc := range cases {
+		resp, err := gohttp.New().Path(tc.input).Get(ts.URL)
+		assert.NoError(err, "Get request with path should cause no error.")
+		data, _ := ioutil.ReadAll(resp.Body)
+		assert.Equal(tc.expected, string(data), fmt.Sprintf("input path: %s, expected: %s", tc.input, tc.expected))
+		resp.Body.Close()
+	}
+
+	// Test multiple path method calls
+	resp, _ := gohttp.New().Path("users").Path("cizixs").Get(ts.URL)
 	data, _ := ioutil.ReadAll(resp.Body)
 	assert.Equal("/users/cizixs", string(data))
+	resp.Body.Close()
 }
 
 func TestGetWithQuery(t *testing.T) {

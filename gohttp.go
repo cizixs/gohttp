@@ -227,11 +227,15 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 		return nil, err
 	}
 
-	// create the basci request
+	// create the basic request
 	req, err := http.NewRequest(method, c.url, c.body)
 
 	// concatenate path to url if exists
 	if c.path != "" {
+		// Adds prefix "/" if necessary
+		if !strings.HasPrefix(c.path, "/") {
+			c.path = "/" + c.path
+		}
 		p := req.URL.Path
 		req.URL.Path = filepath.Join(p, c.path)
 	}
@@ -293,8 +297,15 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 // All other HTTP methods will call `Do` behind the scene, and
 // it can be used directly to send the request
 // Custom HTTP method can be sent with this method
-func (c *Client) Do(method, url string) (*GoResponse, error) {
-	c.url = url
+// Accept optional url parameter, if multiple urls are given only the first one
+// will be used.
+func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
+	// TODO: check if url is valid
+	url := ""
+	if len(urls) >= 1 && urls[0] != "" {
+		url = urls[0]
+	}
+	c.URL(url)
 	req, err := c.prepareRequest(method)
 	if err != nil {
 		return nil, err
@@ -306,39 +317,48 @@ func (c *Client) Do(method, url string) (*GoResponse, error) {
 // Get handles HTTP GET request, and return response to user
 // Note that the response is not `http.Response`, but a thin wrapper which does
 // exactly what it used to and a little more.
-func (c *Client) Get(url string) (*GoResponse, error) {
-	return c.Do("GET", url)
+func (c *Client) Get(urls ...string) (*GoResponse, error) {
+	return c.Do("GET", urls...)
 }
 
 // Post handles HTTP POST request
-func (c *Client) Post(url string) (*GoResponse, error) {
-	return c.Do("POST", url)
+func (c *Client) Post(urls ...string) (*GoResponse, error) {
+	return c.Do("POST", urls...)
 }
 
 // Head handles HTTP HEAD request
 // HEAD request works the same way as GET, except the response body is empty.
-func (c *Client) Head(url string) (*GoResponse, error) {
-	return c.Do("HEAD", url)
+func (c *Client) Head(urls ...string) (*GoResponse, error) {
+	return c.Do("HEAD", urls...)
 }
 
 // Put handles HTTP PUT request
-func (c *Client) Put(url string) (*GoResponse, error) {
-	return c.Do("PUT", url)
+func (c *Client) Put(urls ...string) (*GoResponse, error) {
+	return c.Do("PUT", urls...)
 }
 
 // Delete handles HTTP DELETE request
-func (c *Client) Delete(url string) (*GoResponse, error) {
-	return c.Do("DELETE", url)
+func (c *Client) Delete(urls ...string) (*GoResponse, error) {
+	return c.Do("DELETE", urls...)
 }
 
 // Patch handles HTTP PATCH request
-func (c *Client) Patch(url string) (*GoResponse, error) {
-	return c.Do("PATCH", url)
+func (c *Client) Patch(urls ...string) (*GoResponse, error) {
+	return c.Do("PATCH", urls...)
 }
 
 // Options handles HTTP OPTIONS request
-func (c *Client) Options(url string) (*GoResponse, error) {
-	return c.Do("OPTIONS", url)
+func (c *Client) Options(urls ...string) (*GoResponse, error) {
+	return c.Do("OPTIONS", urls...)
+}
+
+// URL sets the base url for the client, this can be overrided by the parameter of the final
+// GET/POST/PUT method
+func (c *Client) URL(url string) *Client {
+	if url != "" {
+		c.url = url
+	}
+	return c
 }
 
 // Path concatenates base url with resource path.
