@@ -366,17 +366,19 @@ func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
 
 	var resp *http.Response
 	// retry the request certain time, if error happens
-	for tried := 1; ; tried++ {
+	tried := 0
+	for {
 		resp, err = c.c.Do(req)
+		tried++
 		if c.retries <= 1 || tried >= c.retries || err == nil {
 			break
 		} else {
-			log.Printf("Request error: %v, retrying %d/%d...\n", err, tried, c.retries)
+			log.Printf("Request [%d/%d] error: %v, retrying...\n", tried, c.retries, err)
 		}
 	}
-	log.Printf("Final request after %d attempt(s)\n", retried)
+	log.Printf("Final request after %d attempt(s)\n", tried)
 	if err != nil {
-		log.Printf("Final request error after %d attempt(s): %v\n", retried, err)
+		log.Printf("Final request error after %d attempt(s): %v\n", tried, err)
 		return nil, err
 	}
 	return &GoResponse{resp}, err
