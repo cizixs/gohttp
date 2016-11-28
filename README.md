@@ -220,6 +220,14 @@ repos, err := c.New().Path("/repos").Get()
 client(s) will share the same instance, change on one side will take effect on the other side, and this might not
 as expected.
 
+## Inspiration
+
+This project is heavily influenced by many awesome projects out there, mainly the following:
+
+- [sling: A Go http client library for creating and sending API requests](https://github.com/dghubble/sling)
+- [gorequest: simplified HTTP client](https://github.com/parnurzea/gorequest)
+- [requests: HTTP for human](https://github.com/kennethreitz/requests)
+
 ## License
 
 [MIT License](https://github.com/cizixs/gohttp/blob/master/LICENSE)
