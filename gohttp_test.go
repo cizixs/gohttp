@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -211,11 +212,13 @@ func TestRetries(t *testing.T) {
 	retried := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		retried++
-		time.Sleep(1000 * time.Millisecond)
+		log.Printf("get request, try the %d time(s)", retried)
+		// use timeout to return error response
+		time.Sleep(1 * time.Second)
 	}))
 	defer ts.Close()
 
-	gohttp.New().Timeout(100 * time.Millisecond).Retries(3).Get(ts.URL)
+	gohttp.New().Timeout(50 * time.Millisecond).Retries(3).Get(ts.URL)
 	assert.Equal(3, retried, "should retry 3 timeout on error")
 }
 
