@@ -370,6 +370,7 @@ func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
 	for {
 		resp, err = c.c.Do(req)
 		tried++
+		log.Printf("Request [%d/%d] sent\n", tried, c.retries)
 		if c.retries <= 1 || tried >= c.retries || err == nil {
 			break
 		} else {
