@@ -225,7 +225,7 @@ as expected.
 This project is heavily influenced by many awesome projects out there, mainly the following:
 
 - [sling: A Go http client library for creating and sending API requests](https://github.com/dghubble/sling)
-- [gorequest: simplified HTTP client](https://github.com/parnurzea/gorequest)
+- [gorequest: simplified HTTP client](https://github.com/parnurzeal/gorequest)
 - [requests: HTTP for human](https://github.com/kennethreitz/requests)
 
 ## License
