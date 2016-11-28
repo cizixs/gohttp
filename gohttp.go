@@ -123,6 +123,9 @@ type Client struct {
 
 	// TLSHandshakeTimeout limits the time spent performing TLS handshake
 	tlsHandshakeTimeout time.Duration
+
+	// how many attempts will be used before give up on error
+	retries int
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -172,6 +175,7 @@ func (c *Client) New() *Client {
 	newClient.proxy = c.proxy
 	newClient.timeout = c.timeout
 	newClient.tlsHandshakeTimeout = c.tlsHandshakeTimeout
+	newClient.retries = c.retries
 
 	// make a copy of simple map data
 	// NOTE: if the map data contains pointer value, it will be shallow copy.
@@ -340,10 +344,10 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 	return req, nil
 }
 
-// Do takes HTTP and url, then makes the request, return the response
+// Do takes HTTP and url, then makes the request, return the response.
 // All other HTTP methods will call `Do` behind the scene, and
-// it can be used directly to send the request
-// Custom HTTP method can be sent with this method
+// it can be used directly to send the request.
+// Custom HTTP method can be sent with this method.
 // Accept optional url parameter, if multiple urls are given only the first one
 // will be used.
 func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
@@ -353,11 +357,23 @@ func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
 		url = urls[0]
 	}
 	c.URL(url)
+
 	req, err := c.prepareRequest(method)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.c.Do(req)
+
+	var resp *http.Response
+	// retry the request certain time, if error happens
+	for tried := 1; ; tried++ {
+		resp, err = c.c.Do(req)
+		if c.retries <= 1 || tried >= c.retries || err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
 	return &GoResponse{resp}, err
 }
 
@@ -447,6 +463,14 @@ func (c *Client) Proxy(proxy string) *Client {
 func (c *Client) Timeout(timeout time.Duration) *Client {
 	// TODO(cizixs): add other timeouts like setup connection timeout,
 	c.timeout = timeout
+	return c
+}
+
+// Retries set how many request attempts will be conducted if error happens for a request.
+// number <= 1 means no retries, send one request and finish.
+func (c *Client) Retries(n int) *Client {
+	// TODO(cizixs): allow user to customize retry condition, like if the response status code is 5XX.
+	c.retries = n
 	return c
 }
 

@@ -18,7 +18,7 @@ A simple to use golang http client
 - [x] Read from response the easy way
 - [x] Support proxy configuration
 - [x] Allow set timeout at all levels
-- [ ] Automatically retry request, if you let it
+- [x] Automatically retry request, if you let it
 - [ ] Custom redirect policy
 - [ ] Perform hook functions
 - [ ] Session support, persistent response data, and reuse them in next request
@@ -150,7 +150,17 @@ By default, `net/http` does not have timeout, will wait forever until response i
 This can be a serious issue if server hangs, `gohttp` allows you to set a timeout limit,
 if response does not finish in time, an error will be returned.
 
-    gohttp.New().Timeout(100*time.Millisecond).Get()
+    gohttp.New().Timeout(100*time.Millisecond).Get("http://example.com")
+
+### Retries
+
+Error happens! `gohttp` provides retry mechanism to automatically resend request when error happens.
+This is useful to avoid some unstable error like network temporary failure:
+
+    gohttp.New().Retries(3).Get("http://example.com")
+
+By default, request is only sent only and all. If custom retry is set to less than one, default behavior will be used.
+The retry condition only means response error, not including 5XX error.
 
 ### Upload file(s)
 
@@ -205,13 +215,14 @@ As stated in document:
 
 > New clones current client struct and returns it.
 > This is useful to initialize some common parameters and send different requests
-> with differenet paths/headers/...
+> with differenet paths/headers/timeout/retries...
 
 For example:
 
 ```go
 c := gohttp.New().URL("https://api.github.com/")
 c.BasicAuth("cizixs", "mypassword")
+c.Timeout(3 * time.Second)
 users, err := c.New().Path("/users/").Get()
 repos, err := c.New().Path("/repos").Get()
 ```
