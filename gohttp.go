@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -369,6 +370,8 @@ func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
 		resp, err = c.c.Do(req)
 		if c.retries <= 1 || tried >= c.retries || err == nil {
 			break
+		} else {
+			log.Printf("Request error: %v, retrying...\n", err)
 		}
 	}
 	if err != nil {
