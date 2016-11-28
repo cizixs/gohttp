@@ -371,10 +371,12 @@ func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
 		if c.retries <= 1 || tried >= c.retries || err == nil {
 			break
 		} else {
-			log.Printf("Request error: %v, retrying...\n", err)
+			log.Printf("Request error: %v, retrying %d/%d...\n", err, tried, c.retries)
 		}
 	}
+	log.Printf("Final request after %d attempt(s)\n", retried)
 	if err != nil {
+		log.Printf("Final request error after %d attempt(s): %v\n", retried, err)
 		return nil, err
 	}
 	return &GoResponse{resp}, err
