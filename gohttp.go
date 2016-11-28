@@ -142,6 +142,53 @@ func New() *Client {
 	}
 }
 
+func copyMap(src map[string]string) map[string]string {
+	newMap := make(map[string]string)
+	for k, v := range src {
+		newMap[k] = v
+	}
+
+	return newMap
+}
+
+// New clones current client struct and returns it
+// This is useful to initialize some common parameters and send different requests
+// with differenet paths/headers/...
+//
+// For example:
+//    c := gohttp.New().URL("https://api.github.com/")
+//    c.BasicAuth("cizixs", "mypassword")
+//    users, err := c.New().Path("/users/").Get()
+//    repos, err := c.New().Path("/repos").Get()
+//
+// Note that files, body and cookies value are copied if pointer value is used, base client and cloned
+// client(s) will share the same instance, change on one side will take effect on the other side.
+func (c *Client) New() *Client {
+	newClient := &Client{}
+	// simple copy
+	newClient.url = c.url
+	newClient.path = c.path
+	newClient.auth = c.auth
+	newClient.proxy = c.proxy
+	newClient.timeout = c.timeout
+	newClient.tlsHandshakeTimeout = c.tlsHandshakeTimeout
+
+	// make a copy of simple map data
+	// NOTE: if the map data contains pointer value, it will be shallow copy.
+	// Right now it works, because both headers and queries are `string-string` map value
+	newClient.query = copyMap(c.query)
+	newClient.headers = copyMap(c.headers)
+
+	// TODO(czixs): maybe make a deep copy for these pointer values, or just leave them out?
+	newClient.c = c.c
+	newClient.queryStructs = c.queryStructs
+	newClient.body = c.body
+	newClient.cookies = c.cookies
+	newClient.files = c.files
+
+	return newClient
+}
+
 // setupClient handles the connection details from http client to TCP connections.
 // Timeout, proxy, TLS config ..., these are very important but rarely used directly
 // by httpclient users.

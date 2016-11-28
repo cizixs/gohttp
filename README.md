@@ -196,6 +196,30 @@ If the response contains json struct, you can pass a struct to it, and `gohttp` 
     resp, _ := gohttp.New().Get("http://someurl.com")
     err := resp.AsJSON(user)
 
+### Reuse client
+
+When developing complicated http client applications, it is common to interact with one remote server with some common
+settings, like url, basic auth, custom header, etc. `gohttp` provides `New` method for this kind of situation.
+
+As stated in document: 
+
+> New clones current client struct and returns it.
+> This is useful to initialize some common parameters and send different requests
+> with differenet paths/headers/...
+
+For example:
+
+```go
+c := gohttp.New().URL("https://api.github.com/")
+c.BasicAuth("cizixs", "mypassword")
+users, err := c.New().Path("/users/").Get()
+repos, err := c.New().Path("/repos").Get()
+```
+
+**Note**: files, body and cookies value are copied so that if pointer value is used, base client and cloned
+client(s) will share the same instance, change on one side will take effect on the other side, and this might not
+as expected.
+
 ## License
 
 [MIT License](https://github.com/cizixs/gohttp/blob/master/LICENSE)

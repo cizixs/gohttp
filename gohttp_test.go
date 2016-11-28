@@ -34,6 +34,24 @@ func TestGet(t *testing.T) {
 	assert.Equal(greeting, string(actualGreeting))
 }
 
+func TestCloneClient(t *testing.T) {
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, r.URL.Path)
+	}))
+	defer ts.Close()
+
+	c := gohttp.New().URL(ts.URL)
+	resp, _ := c.New().Path("/foo").Get()
+	data, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("/foo", string(data))
+
+	resp, _ = c.New().Path("/bar").Get()
+	data, _ = ioutil.ReadAll(resp.Body)
+	assert.Equal("/bar", string(data))
+}
+
 func TestResponseAsString(t *testing.T) {
 	assert := assert.New(t)
 
