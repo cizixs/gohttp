@@ -81,7 +81,8 @@ func (resp *GoResponse) AsJSON(v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
-// Client is the main struct that wraps net/http
+// Client is the main struct that wraps net/http.
+// It stores all necessary data for the request to be sent, include request method, url, body.
 type Client struct {
 	c *http.Client
 
@@ -139,6 +140,9 @@ type Client struct {
 	// debug toggles debug mode of gohttp.
 	// It is useful when user wants to see what is going on behind the scene.
 	debug bool
+
+	// logger determines how the log is printed
+	logger *log.Logger
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -149,6 +153,7 @@ var DefaultClient = New()
 func New() *Client {
 	t := &http.Transport{}
 	debug := os.Getenv(debugEnv) == "1"
+	logger := log.New(os.Stderr, "[gohttp] ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	return &Client{
 		query:        make(map[string]string),
@@ -160,6 +165,7 @@ func New() *Client {
 		timeout:      DefaultTimeout,
 		transport:    t,
 		debug:        debug,
+		logger:       logger,
 	}
 }
 
@@ -208,11 +214,19 @@ func (c *Client) New() *Client {
 	newClient.body = c.body
 	newClient.cookies = c.cookies
 	newClient.files = c.files
+	newClient.logger = c.logger
 
 	// use the same tranport
 	newClient.transport = c.transport
 
 	return newClient
+}
+
+// log writes a formatted log message record to Stderr
+func (c *Client) logf(format string, v ...interface{}) {
+	if c.debug {
+		c.logger.Printf(format, v...)
+	}
 }
 
 // setupClient handles the connection details from http client to TCP connections.
@@ -302,6 +316,9 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 
 	// create the basic request
 	req, err := http.NewRequest(method, c.url, c.body)
+	if err != nil {
+		return nil, err
+	}
 
 	// concatenate path to url if exists
 	if c.path != "" {
@@ -359,10 +376,6 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 		req.SetBasicAuth(c.auth.username, c.auth.password)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	return req, nil
 }
 
@@ -405,10 +418,10 @@ func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
 	if c.debug {
 		dump, err := httputil.DumpRequestOut(req, true)
 		if err != nil {
-			log.Println("err: ", err)
+			c.logf("err: %v\n", err)
 			return nil, err
 		}
-		log.Printf("%s\n", string(dump))
+		c.logf("http request dump:\n%s\n", string(dump))
 	}
 
 	var resp *http.Response
@@ -420,21 +433,21 @@ func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
 		if c.retries <= 1 || tried >= c.retries || err == nil {
 			break
 		} else {
-			log.Printf("Request [%d/%d] error: %v, retrying...\n", tried, c.retries, err)
+			c.logf("Request [%d/%d] error: %v, retrying...\n", tried, c.retries, err)
 		}
 	}
 	if err != nil {
-		log.Printf("Final request error after %d attempt(s): %v\n", tried, err)
+		c.logf("Final request error after %d attempt(s): %v\n", tried, err)
 		return nil, err
 	}
 
 	if c.debug {
 		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			log.Println("err: ", err)
+			c.logf("err: %v\n", err)
 			return nil, err
 		}
-		log.Printf("%s\n", string(dump))
+		c.logf("http response dump:\n%s\n", string(dump))
 	}
 	return &GoResponse{resp}, err
 }
