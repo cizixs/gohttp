@@ -8,6 +8,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -26,6 +27,10 @@ const (
 // DefaultTimeout defines the request timeout limit, avoiding client hanging when the
 // remote server does not responde.
 const DefaultTimeout = 3 * time.Second
+
+// debugEnv is the environment variable that toggles debug mode.
+// 1 means turn on debug mode, 0 or any other value(empty value) means turn off debug mode
+const debugEnv = "GOHTTP_DEBUG"
 
 type basicAuth struct {
 	username string
@@ -130,6 +135,10 @@ type Client struct {
 
 	// transport is the actual worker that carries http request, and send it out.
 	transport *http.Transport
+
+	// debug toggles debug mode of gohttp.
+	// It is useful when user wants to see what is going on behind the scene.
+	debug bool
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -139,6 +148,7 @@ var DefaultClient = New()
 // New returns a new GoClient with default values
 func New() *Client {
 	t := &http.Transport{}
+	debug := os.Getenv(debugEnv) == "1"
 
 	return &Client{
 		query:        make(map[string]string),
@@ -149,6 +159,7 @@ func New() *Client {
 		files:        make([]*fileForm, 0),
 		timeout:      DefaultTimeout,
 		transport:    t,
+		debug:        debug,
 	}
 }
 
@@ -183,6 +194,7 @@ func (c *Client) New() *Client {
 	newClient.timeout = c.timeout
 	newClient.tlsHandshakeTimeout = c.tlsHandshakeTimeout
 	newClient.retries = c.retries
+	newClient.debug = c.debug
 
 	// make a copy of simple map data
 	// NOTE: if the map data contains pointer value, it will be shallow copy.
@@ -190,7 +202,7 @@ func (c *Client) New() *Client {
 	newClient.query = copyMap(c.query)
 	newClient.headers = copyMap(c.headers)
 
-	// TODO(czixs): maybe make a deep copy for these pointer values, or just leave them out?
+	// TODO(cizixs): maybe make a deep copy for these pointer values, or just leave them out?
 	newClient.c = c.c
 	newClient.queryStructs = c.queryStructs
 	newClient.body = c.body
@@ -354,6 +366,21 @@ func (c *Client) prepareRequest(method string) (*http.Request, error) {
 	return req, nil
 }
 
+// Debug sets the debug mode of go http.
+// By default, debug mode is off.
+//
+// This is only for testing and debugging purpose,
+// it will print out detail information such as request and response dump string,
+// and other logging lines.
+//
+// If `GOHTTP_DEBUG` environment variable is set, `gohttp` will use the value.
+// 1 for turn on debug mode, and others for turn off debug mode.
+// Debug method overrides environment variable value.
+func (c *Client) Debug(debug bool) *Client {
+	c.debug = debug
+	return c
+}
+
 // Do takes HTTP and url, then makes the request, return the response.
 // All other HTTP methods will call `Do` behind the scene, and
 // it can be used directly to send the request.
@@ -373,23 +400,41 @@ func (c *Client) Do(method string, urls ...string) (*GoResponse, error) {
 		return nil, err
 	}
 
+	// use httputil to dump raw request string.
+	// NOTE: some details might be lost such as header order and case.
+	if c.debug {
+		dump, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			log.Println("err: ", err)
+			return nil, err
+		}
+		log.Printf("%s\n", string(dump))
+	}
+
 	var resp *http.Response
 	// retry the request certain time, if error happens
 	tried := 0
 	for {
 		resp, err = c.c.Do(req)
 		tried++
-		log.Printf("Request [%d/%d] sent\n", tried, c.retries)
 		if c.retries <= 1 || tried >= c.retries || err == nil {
 			break
 		} else {
 			log.Printf("Request [%d/%d] error: %v, retrying...\n", tried, c.retries, err)
 		}
 	}
-	log.Printf("Final request after %d attempt(s)\n", tried)
 	if err != nil {
 		log.Printf("Final request error after %d attempt(s): %v\n", tried, err)
 		return nil, err
+	}
+
+	if c.debug {
+		dump, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			log.Println("err: ", err)
+			return nil, err
+		}
+		log.Printf("%s\n", string(dump))
 	}
 	return &GoResponse{resp}, err
 }
@@ -483,17 +528,18 @@ func (c *Client) Timeout(timeout time.Duration) *Client {
 	return c
 }
 
+// TLSHandshakeTimeout sets the wait limit for performing TLS handshake.
+// Default value for go1.6 is 10s, change this value to suit yourself.
+func (c *Client) TLSHandshakeTimeout(timeout time.Duration) *Client {
+	c.tlsHandshakeTimeout = timeout
+	return c
+}
+
 // Retries set how many request attempts will be conducted if error happens for a request.
 // number <= 1 means no retries, send one request and finish.
 func (c *Client) Retries(n int) *Client {
 	// TODO(cizixs): allow user to customize retry condition, like if the response status code is 5XX.
 	c.retries = n
-	return c
-}
-
-// TLSHandshakeTimeout sets the wait limit for performing TLS handshake
-func (c *Client) TLSHandshakeTimeout(timeout time.Duration) *Client {
-	c.tlsHandshakeTimeout = timeout
 	return c
 }
 
