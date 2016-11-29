@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -212,9 +211,11 @@ func TestRetries(t *testing.T) {
 	retried := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		retried++
-		log.Printf("get request, try the %d time(s)", retried)
+		// create a error response by returning 301 without `Location` header
+		http.Error(w, "moved", http.StatusMovedPermanently)
+		return
 		// use timeout to return error response
-		time.Sleep(1 * time.Second)
+		// time.Sleep(1 * time.Second)
 	}))
 	defer ts.Close()
 
