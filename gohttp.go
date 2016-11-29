@@ -127,6 +127,9 @@ type Client struct {
 
 	// how many attempts will be used before give up on error
 	retries int
+
+	// transport is the actual worker that carries http request, and send it out.
+	transport *http.Transport
 }
 
 // DefaultClient provides a simple usable client, it is given for quick usage.
@@ -135,6 +138,8 @@ var DefaultClient = New()
 
 // New returns a new GoClient with default values
 func New() *Client {
+	t := &http.Transport{}
+
 	return &Client{
 		query:        make(map[string]string),
 		queryStructs: make([]interface{}, 0),
@@ -143,6 +148,7 @@ func New() *Client {
 		cookies:      make([]*http.Cookie, 0),
 		files:        make([]*fileForm, 0),
 		timeout:      DefaultTimeout,
+		transport:    t,
 	}
 }
 
@@ -191,6 +197,9 @@ func (c *Client) New() *Client {
 	newClient.cookies = c.cookies
 	newClient.files = c.files
 
+	// use the same tranport
+	newClient.transport = c.transport
+
 	return newClient
 }
 
@@ -199,21 +208,21 @@ func (c *Client) New() *Client {
 // by httpclient users.
 func (c *Client) setupClient() error {
 	// create the transport and client instance first
-	transport := &http.Transport{}
 	if c.proxy != "" {
 		// use passed proxy, otherwise try to use environment variable proxy, or just no proxy at all.
 		proxy, err := url.Parse(c.proxy)
 		if err != nil {
 			return err
 		}
-		transport.Proxy = http.ProxyURL(proxy)
+		c.transport.Proxy = http.ProxyURL(proxy)
 	}
 
 	if c.tlsHandshakeTimeout != time.Duration(0) {
-		transport.TLSHandshakeTimeout = c.tlsHandshakeTimeout
+		c.transport.TLSHandshakeTimeout = c.tlsHandshakeTimeout
 	}
 
-	c.c = &http.Client{Transport: transport}
+	// TODO(cizixs): maybe reuse http.Client as well
+	c.c = &http.Client{Transport: c.transport}
 
 	// request timeout limit
 	// timeout zero means no timeout
