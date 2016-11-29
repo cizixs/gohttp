@@ -231,6 +231,42 @@ repos, err := c.New().Path("/repos").Get()
 client(s) will share the same instance, change on one side will take effect on the other side, and this might not
 as expected.
 
+### Debug mode
+
+When developing http apps, it is often necessary to know the actual request and response sent for debugging or testing purpose.
+`gohttp` provides debug mode, which can be turned on by environment variable `GOHTTP_DEBUG` or `Debug(bool)` method:
+
+    resp, _ := gohttp.New().Debug(true).Get("http://someurl.com")
+
+In debug mode, `gohttp` will print out each request and response in human-readble format. 
+
+A typical request:
+
+    POST / HTTP/1.1
+    Host: 127.0.0.1:43827
+    User-Agent: Go-http-client/1.1
+    Content-Length: 39
+    Content-Type: application/json
+    Accept-Encoding: gzip
+
+    {"title":"Test title","name":"cizixs"}
+
+A typical response:
+
+    2016/11/29 18:30:59 HTTP/1.1 200 OK
+    Content-Length: 39
+    Content-Type: application/json; charset=utf-8
+    Date: Tue, 29 Nov 2016 10:30:59 GMT
+    
+    {"age":24,"name":"cizixs"}
+
+## Contribution
+
+Contributions are welcome!
+
+- Open a new issue if you find a bug or want to propose a feature
+- Create a Pull Request if you want to contribute to the code
+
 ## Inspiration
 
 This project is heavily influenced by many awesome projects out there, mainly the following:
